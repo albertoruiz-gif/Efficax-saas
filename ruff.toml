@@ -1,0 +1,6 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+# Set explícito y determinista (los defaults de ruff cambian entre versiones)
+select = ["E4", "E7", "E9", "F", "W", "I"]

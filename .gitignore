@@ -1,0 +1,30 @@
+# Secretos — NUNCA commitear (regla verificable, ver CONSTITUTION.md)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*api_key*
+*apikey*
+credenciales*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# Locales
+.claude/
+.DS_Store
+Thumbs.db
+*.log

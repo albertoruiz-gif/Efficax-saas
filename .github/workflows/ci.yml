@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff
+      - run: ruff check .
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r servidor_control/requirements.txt -r servidor_control/requirements-dev.txt
+      - run: pytest servidor_control/tests server_actions -q
+        env:
+          # Valores fijos SOLO de CI (lección Haskell: tests fail-closed necesitan
+          # sus variables en CI o fallan por diseño, no por bug)
+          EFX_ENV: ci
+
+  sast:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: python }
+      - uses: github/codeql-action/analyze@v3
+
+  sca:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pip-audit
+      - run: pip-audit -r servidor_control/requirements.txt --strict
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # imagen (Trivy): se activa cuando existan Dockerfiles — patrón Haskell §3.5,
+  # documentado y deshabilitado, no borrado.
+  imagen:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "pendiente de Dockerfiles"
