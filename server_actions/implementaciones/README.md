@@ -20,8 +20,9 @@ Estado
 | ventas_atencion | crear_ticket | 15-ago-2026, tenant 0 (ticket de soporte, reclamo con Libro de Reclamaciones + recordatorio de plazo legal agendado, + kill-switch) |
 | ventas_atencion | derivar_humano | 15/16-ago-2026, tenant 0 (con lead_id: nota+actividad en el lead; sin lead_id: nota+actividad en el partner del usuario real; + kill-switch) |
 | ventas_atencion | resumen_conversacion | 16-ago-2026, tenant 0 (chatter del lead 1004 verificado, lead inexistente → mensaje correcto, + kill-switch) |
+| ventas_atencion | nota_vendedor | 16-ago-2026, tenant 0 (nota interna + actividad de seguimiento con fecha verificadas, cliente inexistente → mensaje correcto, aprobacion=confirmar respetada por el agente, + kill-switch) |
 
-Las otras 52 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 51 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
