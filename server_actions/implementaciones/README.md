@@ -15,8 +15,9 @@ Estado
 | Agente | Herramienta | Probada en vivo |
 |---|---|---|
 | ventas_atencion | crear_actualizar_lead | 15-ago-2026, tenant 0 (crea/actualiza + kill-switch) |
+| ventas_atencion | consulta_precio_stock | 15-ago-2026, tenant 0 (precio+stock exacto, ambiguo con 2 candidatos + kill-switch) |
 
-Las otras 57 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 56 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
@@ -33,3 +34,20 @@ Contexto imprescindible antes de escribir una nueva
   `lineas_json`, no `lineas`).
 - Nunca `sudo()` fuera de la guarda: la herramienta corre con los permisos
   reales de quien le habla al agente.
+
+Cómo se prueba en vivo (patrón establecido 15-ago-2026)
+--------------------------------------------------------
+
+- `scripts/booster_rpc.py` — helper RPC reusable: instala/actualiza el
+  `ir.actions.server` desde el catálogo + la implementación real, crea/
+  ajusta un tema de prueba, y prende/apaga la licencia para el kill-switch.
+  Lee credenciales de `scripts/credenciales_booster.env` (gitignored).
+- Las herramientas nuevas se cablean a un tema en el agente **"Mentor
+  Efficax (piloto)"** (tema "Ventas — Piloto herramientas nuevas"), nunca
+  directo al agente de cara al cliente ("Hasky") — así una herramienta a
+  medio probar no puede responderle a un visitante real.
+- La conversación de prueba se hace por el chat del agente en el backend de
+  Odoo (Ajustes > IA > Agentes > abrir el agente), no llamando `run()` por
+  RPC: Odoo inyecta las variables del esquema como parte del pipeline de
+  tool-calling de la IA, no como contexto de `ir.actions.server.run()`
+  (confirmado con un `NameError` al intentarlo directo).
