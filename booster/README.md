@@ -46,24 +46,46 @@ grid de apps:
 **Fases 2-5: no construidas todavía.** El agente lo sabe y lo dice
 explícitamente si el dueño pregunta — no promete continuar solo.
 
-## Ícono de la app (16-ago-2026)
+## Ícono de la app (16-ago-2026, iterado dos veces)
 
 Se reemplazó el ícono genérico inicial (fa-rocket morado, placeholder) por
-uno propio: una celda Braille con los puntos 1 y 2 encendidos (letra "B"),
-naranja `#FF6A00` sobre negro `#050505` — colores exactos de
+uno propio, en el naranja `#FF6A00` y negro `#050505` exactos de
 `BrandBook_Efficax_Premium_Completo_v3.docx` (Branding, fuera de este
-repo). La idea de usar Braille surgió de Alberto y encaja bien con el
-propio isotipo de Efficax, que ya está construido con puntos y barras.
-Nombre y branding de Booster **no están decididos como definitivos** —
-puede cambiar más adelante — así que el ícono se hizo simple y
-reemplazable, no una inversión grande de diseño.
+repo). Nombre y branding de Booster **no están decididos como
+definitivos** — puede cambiar más adelante — así que el ícono se hizo
+simple y reemplazable, no una inversión grande de diseño.
 
-Fuente: `booster/assets/icono_booster_braille_b.png` (generado con
-Pillow, no a mano en un editor — reproducible). Instalado vía
-`web_icon_data` en `ir.ui.menu` (campo binario para ícono custom, no el
-`web_icon` de texto que solo acepta el formato `fa-icono,#fondo,#icono`).
-**Detalle no documentado por Odoo, verificado en vivo:** si `web_icon_data`
-y `web_icon` se escriben en la misma llamada `write()`, Odoo vacía
+**Intento 1 (descartado):** una celda Braille con los puntos 1 y 2
+encendidos (letra "B"). La idea de usar Braille la propuso Alberto y
+encaja bien con el propio isotipo de Efficax (construido con puntos y
+barras) — pero la ejecución no funcionó visualmente ("se ve horrible",
+feedback directo). Descartada.
+
+**Intento 2 (también descartado):** reconstruir la letra B con el MISMO
+sistema modular de barras/puntos que arma E-F-F-I-C-A-X en el logo real
+(medido con precisión de píxel sobre `image1.png` del brand book: grosor
+de barra, radio de esquina, espaciado entre filas, todo proporcional).
+Se probaron 3 variantes — asta + 3 barras conectadas (se leía como "E"),
+asta + verticales cerrando los dos vientres (quedaba un bloque sólido
+pesado, no encajaba con el resto de letras que son livianas y separadas),
+y la construcción de la "C" con la abertura cerrada (se leía como una
+simple lista de viñetas, no como letra). Conclusión: ese sistema de
+letras se diseñó para deletrear EFFICAX específicamente, no es un
+alfabeto completo — no da para una B legible sin forzarlo demasiado.
+
+**Versión actual:** letra "B" geométrica real, tipografía Montserrat
+Black (peso grueso, redondeada, misma familia visual que Inter/Manrope —
+las que pide el brand book para UI digital, pero no están instaladas en
+esta máquina; Montserrat es el sustituto más cercano disponible),
+naranja sobre negro. Prioriza que se lea claro como "B" por sobre imitar
+la construcción exacta del logotipo.
+
+Fuente: `booster/assets/icono_booster_b.png` (generado con Pillow, no a
+mano en un editor — reproducible). Instalado vía `web_icon_data` en
+`ir.ui.menu` (campo binario para ícono custom, no el `web_icon` de texto
+que solo acepta el formato `fa-icono,#fondo,#icono`). **Detalle no
+documentado por Odoo, verificado en vivo:** si `web_icon_data` y
+`web_icon` se escriben en la misma llamada `write()`, Odoo vacía
 `web_icon_data` — hay que escribirlos en llamadas separadas (así quedó en
 `instalar_booster_fase1.py`).
 

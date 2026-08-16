@@ -109,7 +109,7 @@ def crear_modelo_implementacion(o: Odoo) -> int:
     return modelo_id
 
 
-ICONO_PATH = Path(__file__).resolve().parent / "assets" / "icono_booster_braille_b.png"
+ICONO_PATH = Path(__file__).resolve().parent / "assets" / "icono_booster_b.png"
 
 
 def crear_menu_app(o: Odoo) -> int:
