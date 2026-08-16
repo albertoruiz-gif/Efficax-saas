@@ -17,8 +17,9 @@ Estado
 | ventas_atencion | crear_actualizar_lead | 15-ago-2026, tenant 0 (crea/actualiza + kill-switch) |
 | ventas_atencion | consulta_precio_stock | 15-ago-2026, tenant 0 (precio+stock exacto, ambiguo con 2 candidatos + kill-switch) |
 | ventas_atencion | estado_pedido | 15-ago-2026, tenant 0 (verificado ok, verificación incorrecta → mensaje genérico sin revelar el pedido, + kill-switch) |
+| ventas_atencion | crear_ticket | 15-ago-2026, tenant 0 (ticket de soporte, reclamo con Libro de Reclamaciones + recordatorio de plazo legal agendado, + kill-switch) |
 
-Las otras 55 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 54 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
@@ -41,6 +42,16 @@ Contexto imprescindible antes de escribir una nueva
   técnico genérico en el chat (Odoo no expone el traceback real al agente
   de IA) — detectado y corregido en `estado_pedido.py`. Antes de asumir que
   un campo existe en un modelo estándar, verificar con `fields_get`.
+- Para crear un `mail.activity` sobre un registro, usar el método del mixin
+  `registro.activity_schedule(xmlid, ...)` (ej. `'mail.mail_activity_data_todo'`)
+  en vez de buscar `ir.model`/`mail.activity.type` a mano y hacer
+  `env['mail.activity'].create(...)`: ese camino manual falló EN SILENCIO
+  en `crear_ticket.py` (el ticket se creaba bien, pero la actividad nunca
+  aparecía y no había ningún error visible en el chat — el usuario real que
+  ejecuta la herramienta probablemente no tiene acceso de lectura a
+  `ir.model`, que es un modelo técnico oculto por defecto). Con
+  `activity_schedule` (que resuelve el tipo vía `env.ref`, de uso general)
+  funcionó a la primera.
 
 Cómo se prueba en vivo (patrón establecido 15-ago-2026)
 --------------------------------------------------------
