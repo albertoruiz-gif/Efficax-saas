@@ -87,7 +87,7 @@ else:
             if fecha_seg_txt:
                 try:
                     fecha_dt = datetime.datetime.strptime(fecha_seg_txt, '%Y-%m-%d').date()
-                except ValueError:
+                except:  # noqa: E722 -- ValueError no esta expuesto en el sandbox de Odoo (ver README)
                     fecha_dt = False
             if not fecha_dt:
                 fecha_dt = (datetime.datetime.now() + datetime.timedelta(days=1)).date()

@@ -67,6 +67,25 @@ def test_datetime_now_siempre_calificado(agente, nombre, modpath):
         pytest.fail(f"{nombre}: usa datetime.now() sin calificar en '...{mod.CODIGO[max(0, m.start()-20):m.start()+20]}...'")
 
 
+CLASES_DE_EXCEPCION_NO_DISPONIBLES = (
+    "ValueError", "TypeError", "KeyError", "AttributeError", "IndexError",
+    "RuntimeError", "NameError", "Exception", "StopIteration",
+)
+
+
+@pytest.mark.parametrize("agente,nombre,modpath", MODULOS, ids=IDS)
+def test_sin_clases_de_excepcion_no_disponibles(agente, nombre, modpath):
+    """`except ValueError:` (y similares) revienta con NameError real en el
+    sandbox de Odoo -- esas clases no estan expuestas ahi (detectado en vivo
+    en agendar_reunion.py: un parseo de fecha con try/except ValueError
+    fallo con "name 'ValueError' is not defined"). Usar `except:` desnudo."""
+    mod = importlib.import_module(modpath)
+    for clase in CLASES_DE_EXCEPCION_NO_DISPONIBLES:
+        assert f"except {clase}" not in mod.CODIGO, (
+            f"{nombre}: 'except {clase}' no funciona en el sandbox de Odoo -- usar 'except:' desnudo"
+        )
+
+
 @pytest.mark.parametrize("agente,nombre,modpath", MODULOS, ids=IDS)
 def test_tool_sigue_en_el_catalogo(agente, nombre, modpath):
     data = json.loads(catalogo_path().read_text(encoding="utf-8"))

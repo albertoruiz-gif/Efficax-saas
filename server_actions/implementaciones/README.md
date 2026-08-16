@@ -21,8 +21,9 @@ Estado
 | ventas_atencion | derivar_humano | 15/16-ago-2026, tenant 0 (con lead_id: nota+actividad en el lead; sin lead_id: nota+actividad en el partner del usuario real; + kill-switch) |
 | ventas_atencion | resumen_conversacion | 16-ago-2026, tenant 0 (chatter del lead 1004 verificado, lead inexistente → mensaje correcto, + kill-switch) |
 | ventas_atencion | nota_vendedor | 16-ago-2026, tenant 0 (nota interna + actividad de seguimiento con fecha verificadas, cliente inexistente → mensaje correcto, aprobacion=confirmar respetada por el agente, + kill-switch) |
+| ventas_atencion | agendar_reunion | 16-ago-2026, tenant 0 (evento_directo con hora Lima→UTC verificada en el registro real, enlace_citas sin tipo configurado → mensaje honesto, + kill-switch) |
 
-Las otras 51 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 50 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
@@ -78,3 +79,15 @@ Cómo se prueba en vivo (patrón establecido 15-ago-2026)
   texto no se escribe donde se cree). Más confiable: leer la página
   (`read_page`, filtro `interactive`) y clickear por `ref` del textbox, no
   por coordenadas.
+- `except ValueError:` (o cualquier otra clase de excepción nombrada:
+  `TypeError`, `KeyError`, etc.) revienta con `NameError` real en el
+  sandbox de Odoo — esas clases no están expuestas ahí, ni siquiera para
+  capturarlas. Usar `except:` desnudo. Cubierto ahora por un test
+  automático (`test_sin_clases_de_excepcion_no_disponibles`) que revisa
+  toda implementación real.
+- Cualquier campo `Datetime` con hora (no solo fecha) que reciba un valor
+  en hora local (ej. "15:00 hora Lima") hay que convertirlo a UTC A MANO
+  antes de guardarlo: `create()` no hace conversión de zona horaria por sí
+  solo. Perú es UTC-5 fijo (sin horario de verano) — confirmado en vivo en
+  `agendar_reunion.py`: sin el offset, un evento pedido a las 15:00 Lima
+  quedaba guardado (y mostrado) a las 10:00 Lima, 5 horas antes.
