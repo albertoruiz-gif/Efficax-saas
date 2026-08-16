@@ -1,0 +1,35 @@
+Implementaciones reales
+=======================
+
+Acá vive el cuerpo Python REAL de cada herramienta, a diferencia de
+`generadas/`, que sólo produce esqueletos con `TODO` a partir del catálogo.
+
+Regla: una herramienta sólo se considera implementada cuando fue instalada y
+probada EN VIVO en un Odoo real — con la llave vigente (camino feliz) y con
+la llave vencida (kill-switch). Mientras no tenga esa doble prueba, no entra
+acá.
+
+Estado
+------
+
+| Agente | Herramienta | Probada en vivo |
+|---|---|---|
+| ventas_atencion | crear_actualizar_lead | 15-ago-2026, tenant 0 (crea/actualiza + kill-switch) |
+
+Las otras 57 herramientas del catálogo siguen como esqueletos. Ya no hay
+incógnita de arquitectura: el patrón agente → tema → Server Action, la
+guarda de llave, el esquema saneado y el ciclo de aprobación están
+verificados de punta a punta. Lo que falta es escribir la lógica de negocio
+de cada una y pasarle la misma doble prueba.
+
+Contexto imprescindible antes de escribir una nueva
+---------------------------------------------------
+
+- `guarda_llave.py` — la guarda va SIEMPRE primero; ojo con
+  `datetime.datetime.now()` (no `datetime.now()`).
+- `esquemas_odoo.py` — qué acepta Odoo en `ai_tool_schema` y en qué se
+  traduce lo que no acepta. Los nombres de las variables que recibe el
+  código son los del esquema SANEADO (ej. `periodo_desde`, no `periodo`;
+  `lineas_json`, no `lineas`).
+- Nunca `sudo()` fuera de la guarda: la herramienta corre con los permisos
+  reales de quien le habla al agente.

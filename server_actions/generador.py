@@ -25,6 +25,7 @@ import json
 import os
 import pathlib
 
+from esquemas_odoo import sanear_para_odoo
 from guarda_llave import GUARDA_TEMPLATE
 
 # La spec vive fuera de este repo (en EFFICAX_IA, junto al resto de la
@@ -76,8 +77,13 @@ def _limpiar_modelo(modelo: str) -> str:
     return modelo.split(" (")[0].strip()
 
 
-def construir_payload_ir_actions_server(tool: dict, agente: str) -> dict:
-    props = list(tool.get("input_schema", {}).get("properties", {}).keys())
+def construir_payload_ir_actions_server(tool: dict, agente: str, defs: dict) -> dict:
+    # El esquema que ve Odoo NO es el del catálogo: Odoo sólo acepta un
+    # subconjunto de JSON Schema (ver esquemas_odoo.py). Los nombres de los
+    # parámetros que recibe el código son los del esquema SANEADO, porque son
+    # los que Odoo inyecta como variables.
+    schema_odoo = sanear_para_odoo(tool.get("input_schema", {}), defs)
+    props = list(schema_odoo["properties"].keys())
     modelos = tool.get("modelos_odoo") or []
     modelo_tecnico = _limpiar_modelo(modelos[0]) if modelos else False
     codigo = CODE_TEMPLATE.format(
@@ -93,7 +99,7 @@ def construir_payload_ir_actions_server(tool: dict, agente: str) -> dict:
         "code": codigo,
         "use_in_ai": True,
         "ai_tool_description": tool["description"],
-        "ai_tool_schema": json.dumps(tool["input_schema"], ensure_ascii=False),
+        "ai_tool_schema": json.dumps(schema_odoo, ensure_ascii=False),
         "_meta": {
             "agente": agente,
             "aprobacion": tool["aprobacion"],
@@ -104,6 +110,7 @@ def construir_payload_ir_actions_server(tool: dict, agente: str) -> dict:
 
 def generar(catalogo: pathlib.Path, salida: pathlib.Path) -> dict:
     data = json.loads(catalogo.read_text(encoding="utf-8"))
+    defs = data.get("$defs", {})
     salida.mkdir(parents=True, exist_ok=True)
     n_server_action = 0
     n_servidor_control = 0
@@ -112,7 +119,7 @@ def generar(catalogo: pathlib.Path, salida: pathlib.Path) -> dict:
         carpeta.mkdir(exist_ok=True)
         for t in tools:
             if t["ejecuta"] == "server_action":
-                payload = construir_payload_ir_actions_server(t, agente)
+                payload = construir_payload_ir_actions_server(t, agente, defs)
                 (carpeta / f"{t['name']}.json").write_text(
                     json.dumps(payload, ensure_ascii=False, indent=2),
                     encoding="utf-8",
