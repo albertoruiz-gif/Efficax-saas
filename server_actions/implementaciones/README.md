@@ -22,8 +22,11 @@ Estado
 | ventas_atencion | resumen_conversacion | 16-ago-2026, tenant 0 (chatter del lead 1004 verificado, lead inexistente → mensaje correcto, + kill-switch) |
 | ventas_atencion | nota_vendedor | 16-ago-2026, tenant 0 (nota interna + actividad de seguimiento con fecha verificadas, cliente inexistente → mensaje correcto, aprobacion=confirmar respetada por el agente, + kill-switch) |
 | ventas_atencion | agendar_reunion | 16-ago-2026, tenant 0 (evento_directo con hora Lima→UTC verificada en el registro real, enlace_citas sin tipo configurado → mensaje honesto, + kill-switch) |
+| ventas_atencion | crear_cotizacion | 16-ago-2026, tenant 0 (cotización S00043 en borrador verificada, SKU inexistente → fallo explícito sin cotización parcial, + kill-switch) |
 
-Las otras 50 herramientas del catálogo siguen como esqueletos. Ya no hay
+**Ventas & Atención 24/7 completa: 9 de 9 herramientas implementadas y probadas en vivo.**
+
+Las otras 49 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
@@ -91,3 +94,12 @@ Cómo se prueba en vivo (patrón establecido 15-ago-2026)
   solo. Perú es UTC-5 fijo (sin horario de verano) — confirmado en vivo en
   `agendar_reunion.py`: sin el offset, un evento pedido a las 15:00 Lima
   quedaba guardado (y mostrado) a las 10:00 Lima, 5 horas antes.
+- Este tenant tiene productos con `company_id` fijado a una compañía
+  específica (ej. los SKU `HSK-*` pertenecen a "Haskell_Distribuidor").
+  Un `sale.order` creado sin pasar `company_id` toma la compañía del
+  usuario actual ("Efficax Solutions SA") — si se le agregan líneas con
+  productos de otra compañía, Odoo rechaza la creación con un error claro
+  ("no company crossover is allowed"), sin dejar nada a medias. No es un
+  bug de las herramientas: es una regla real de este tenant que cualquier
+  prueba en vivo con productos `HSK-*` tiene que tener en cuenta (usar un
+  cliente/producto de la misma compañía, o un producto sin `company_id`).
