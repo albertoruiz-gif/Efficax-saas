@@ -16,8 +16,9 @@ Estado
 |---|---|---|
 | ventas_atencion | crear_actualizar_lead | 15-ago-2026, tenant 0 (crea/actualiza + kill-switch) |
 | ventas_atencion | consulta_precio_stock | 15-ago-2026, tenant 0 (precio+stock exacto, ambiguo con 2 candidatos + kill-switch) |
+| ventas_atencion | estado_pedido | 15-ago-2026, tenant 0 (verificado ok, verificación incorrecta → mensaje genérico sin revelar el pedido, + kill-switch) |
 
-Las otras 56 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 55 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
@@ -34,6 +35,12 @@ Contexto imprescindible antes de escribir una nueva
   `lineas_json`, no `lineas`).
 - Nunca `sudo()` fuera de la guarda: la herramienta corre con los permisos
   reales de quien le habla al agente.
+- `res.partner` en este tenant **no tiene campo `mobile`** (solo `phone`,
+  `phone_sanitized`, `email`, `email_normalized` — verificado con
+  `fields_get`, no asumido). Usar `partner.mobile` revienta con un error
+  técnico genérico en el chat (Odoo no expone el traceback real al agente
+  de IA) — detectado y corregido en `estado_pedido.py`. Antes de asumir que
+  un campo existe en un modelo estándar, verificar con `fields_get`.
 
 Cómo se prueba en vivo (patrón establecido 15-ago-2026)
 --------------------------------------------------------
