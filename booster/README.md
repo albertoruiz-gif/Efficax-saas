@@ -2,10 +2,96 @@
 
 Módulo instalable en el tenant: menús, wizard conversacional (5 fases), registro
 `x_booster_implementacion` (estado persistente del wizard) y `x_booster_licencia`
-(llave). CERO lógica de negocio — las recetas viven en el Servidor de Control.
+(llave, vive en `server_actions/guarda_llave.py` + `scripts/booster_rpc.py`).
+CERO lógica de negocio — las recetas viven en el Servidor de Control.
 
-Spec: `../../Agentes_SAAS/agentes_v2/01-booster-implementador.md` + RFD v2.9 §4.
+Spec: `EFFICAX_IA/Agentes_SAAS/agentes_v2/01-booster-implementador.md` (fuera de
+este repo, ver `server_actions/README.md` sobre esta dependencia cross-repo) +
+RFD v2.9 §4.
 
-Estructura Odoo pendiente de armar aquí:
-- `__manifest__.py` · `models/` (x_booster_licencia, x_booster_implementacion)
-- `wizard/` (fases 1-5) · `security/` (grupos por perfil, Fase 3)
+## Por qué no es un addon con `__manifest__.py` (decisión, no olvido)
+
+El plan original era un addon Odoo instalable de verdad. Se descartó
+(16-ago-2026) tras verificar en vivo que `efficaxba-online.odoo.com` es
+**Odoo Online estándar** (confirmado: módulos `saas_trial`/`saas_ai`
+instalados, sin ningún parámetro de Odoo.sh, y sin proyecto en odoo.sh
+asociado a la cuenta) — Odoo Online no permite instalar código Python
+custom, solo Odoo.sh o self-hosted lo permiten. Si en algún momento se migra
+a Odoo.sh, ese es el momento de reconstruir esto como addon real con
+`__manifest__.py`.
+
+En su lugar, Booster se construye con el mismo mecanismo que el resto del
+catálogo: modelos vía `ir.model` (`state='manual'`), lógica vía
+`ir.actions.server`, y un menú/ícono de app vía `ir.ui.menu` +
+`ir.actions.act_window` — es exactamente lo que usa Odoo Studio por dentro.
+
+## Estado actual (16-ago-2026)
+
+**Fase 1 (Descubrimiento) instalada y probada en vivo** en el tenant de
+Efficax (`efficaxba-online.odoo.com`), visible como app "Booster" en el
+grid de apps:
+
+- Modelo `x_booster_implementacion`: negocio, dueño/email, fase actual,
+  respuestas de la entrevista (JSON, se van fusionando), checkpoints,
+  pendientes.
+- Server Action `booster: guardar_avance_wizard`
+  (`implementaciones/guardar_avance_wizard.py`) — con la guarda de licencia
+  igual que cualquier otra herramienta del catálogo.
+- Agente conversacional **Booster** (GPT-5, estilo balanced,
+  restringido a fuentes) con el tema "Fase 1: Descubrimiento".
+- Instalador reproducible: `instalar_booster_fase1.py` — idempotente,
+  correrlo de nuevo no duplica nada. Es el que hay que extender cuando se
+  construyan las Fases 2-5.
+
+**Fases 2-5: no construidas todavía.** El agente lo sabe y lo dice
+explícitamente si el dueño pregunta — no promete continuar solo.
+
+## Bug real encontrado y corregido (16-ago-2026)
+
+La primera versión de `guardar_avance_wizard.py` usaba `x_tenant` como
+llave para saber si ya existía un registro de esa implementación y
+continuarlo. Eso partió el wizard en DOS registros en la primera prueba
+real: uno con un placeholder ("Pendiente - nombre del negocio") del primer
+mensaje, porque el nombre del negocio **todavía no se conocía** — es
+justo lo que Fase 1 va descubriendo — y otro nuevo una vez que sí se supo,
+sin fusionarse nunca. Corregido usando `x_dueno_email` como llave: se
+conoce desde el primer mensaje y no cambia durante la conversación.
+Re-probado con la conversación completa: un solo registro, correctamente
+fusionado.
+
+## Visibilidad en tenants de clientes (pendiente de construir)
+
+Decisión de Alberto (16-ago-2026): en el tenant de **Efficax** los agentes/
+herramientas quedan visibles (es donde se confirma instalación y se afinan).
+En tenants de **clientes reales**, deben quedar invisibles/tras bambalinas —
+solo Booster visible — pero su estado operativo debe poder confirmarse por
+telemetría y por el propio Booster. Esto todavía no está construido (no
+existe ningún tenant de cliente real todavía); queda para cuando se diseñe
+el mecanismo de provisioning de Fase 3.
+
+## Modelo de negocio (acordado 16-ago-2026)
+
+El contrato/carrito se cierra en **Fase 2** (checkout en Casa Efficax, ya
+en el spec) — el cliente sabe qué paga ANTES de que Booster instale nada
+técnico. Fase 3 solo instala lo que ese contrato dice. Si en operación pide
+más agentes, es un **upgrade**: mismo mecanismo de instalación, disparado
+por el lazo Mentor→Booster, registrado para facturación adicional — no un
+camino nuevo.
+
+## Servidor de Control (hasta que haya volumen de clientes)
+
+Por ahora, **no hay una API de Servidor de Control corriendo** — el rol lo
+cumple manualmente quien implementa (mismo patrón de `scripts/booster_rpc.py`
+usado toda la noche del 15/16-ago para instalar y probar las 9 herramientas
+de `ventas_atencion` y esta primera pieza de Booster). Todo el proceso queda
+documentado y versionado acá para poder migrar a una API real más adelante
+sin perder el conocimiento acumulado.
+
+## Estructura
+
+- `implementaciones/` — código real de las Server Actions de Booster (mismo
+  patrón que `server_actions/implementaciones/`, doble prueba obligatoria:
+  vigente + kill-switch).
+- `instalar_booster_fase1.py` — instalador idempotente de la Fase 1.
+- Pendiente de armar: Fases 2-5, y — solo si se migra a Odoo.sh —
+  `__manifest__.py` / `models/` / `wizard/` / `security/` reales.

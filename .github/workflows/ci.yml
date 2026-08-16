@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r servidor_control/requirements.txt -r servidor_control/requirements-dev.txt
-      - run: pytest servidor_control/tests server_actions -q
+      - run: pytest servidor_control/tests server_actions booster -q
         env:
           # Valores fijos SOLO de CI (lección Haskell: tests fail-closed necesitan
           # sus variables en CI o fallan por diseño, no por bug)
