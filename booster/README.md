@@ -46,6 +46,27 @@ grid de apps:
 **Fases 2-5: no construidas todavía.** El agente lo sabe y lo dice
 explícitamente si el dueño pregunta — no promete continuar solo.
 
+## Ícono de la app (16-ago-2026)
+
+Se reemplazó el ícono genérico inicial (fa-rocket morado, placeholder) por
+uno propio: una celda Braille con los puntos 1 y 2 encendidos (letra "B"),
+naranja `#FF6A00` sobre negro `#050505` — colores exactos de
+`BrandBook_Efficax_Premium_Completo_v3.docx` (Branding, fuera de este
+repo). La idea de usar Braille surgió de Alberto y encaja bien con el
+propio isotipo de Efficax, que ya está construido con puntos y barras.
+Nombre y branding de Booster **no están decididos como definitivos** —
+puede cambiar más adelante — así que el ícono se hizo simple y
+reemplazable, no una inversión grande de diseño.
+
+Fuente: `booster/assets/icono_booster_braille_b.png` (generado con
+Pillow, no a mano en un editor — reproducible). Instalado vía
+`web_icon_data` en `ir.ui.menu` (campo binario para ícono custom, no el
+`web_icon` de texto que solo acepta el formato `fa-icono,#fondo,#icono`).
+**Detalle no documentado por Odoo, verificado en vivo:** si `web_icon_data`
+y `web_icon` se escriben en la misma llamada `write()`, Odoo vacía
+`web_icon_data` — hay que escribirlos en llamadas separadas (así quedó en
+`instalar_booster_fase1.py`).
+
 ## Bug real encontrado y corregido (16-ago-2026)
 
 La primera versión de `guardar_avance_wizard.py` usaba `x_tenant` como

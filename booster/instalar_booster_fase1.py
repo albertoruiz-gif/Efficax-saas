@@ -109,22 +109,34 @@ def crear_modelo_implementacion(o: Odoo) -> int:
     return modelo_id
 
 
+ICONO_PATH = Path(__file__).resolve().parent / "assets" / "icono_booster_braille_b.png"
+
+
 def crear_menu_app(o: Odoo) -> int:
+    import base64
+
     existente = o.execute("ir.ui.menu", "search", [("name", "=", "Booster"), ("parent_id", "=", False)])
     if existente:
-        return existente[0]
+        menu_id = existente[0]
+    else:
+        accion_id = o.execute("ir.actions.act_window", "create", {
+            "name": "Booster — Implementaciones",
+            "res_model": "x_booster_implementacion",
+            "view_mode": "list,form",
+        })
+        menu_id = o.execute("ir.ui.menu", "create", {
+            "name": "Booster",
+            "action": "ir.actions.act_window," + str(accion_id),
+            "sequence": 1,
+        })
 
-    accion_id = o.execute("ir.actions.act_window", "create", {
-        "name": "Booster — Implementaciones",
-        "res_model": "x_booster_implementacion",
-        "view_mode": "list,form",
-    })
-    menu_id = o.execute("ir.ui.menu", "create", {
-        "name": "Booster",
-        "action": "ir.actions.act_window," + str(accion_id),
-        "sequence": 1,
-        "web_icon": "fa-rocket,#7C3AED,#FFFFFF",
-    })
+    # web_icon_data en un write() separado: si se manda junto con web_icon en
+    # la misma llamada, Odoo lo vacía (comportamiento verificado en vivo, no
+    # documentado) -- por eso va aparte, siempre al final.
+    if ICONO_PATH.exists():
+        data_b64 = base64.b64encode(ICONO_PATH.read_bytes()).decode("ascii")
+        o.execute("ir.ui.menu", "write", [menu_id], {"web_icon_data": data_b64})
+
     return menu_id
 
 
