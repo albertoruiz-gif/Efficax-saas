@@ -12,6 +12,11 @@ acá.
 Estado
 ------
 
+Nota sobre el API key de RPC: venció una vez (16-ago, ~19:00) a mitad de
+sesión — se regeneró el 17-ago. Ver el requisito de diseño anotado en
+`booster/README.md` (pedir todos los accesos una sola vez en Fase 3, para
+no reproducirle esta misma fricción al cliente real).
+
 | Agente | Herramienta | Probada en vivo |
 |---|---|---|
 | ventas_atencion | crear_actualizar_lead | 15-ago-2026, tenant 0 (crea/actualiza + kill-switch) |
@@ -23,26 +28,25 @@ Estado
 | ventas_atencion | nota_vendedor | 16-ago-2026, tenant 0 (nota interna + actividad de seguimiento con fecha verificadas, cliente inexistente → mensaje correcto, aprobacion=confirmar respetada por el agente, + kill-switch) |
 | ventas_atencion | agendar_reunion | 16-ago-2026, tenant 0 (evento_directo con hora Lima→UTC verificada en el registro real, enlace_citas sin tipo configurado → mensaje honesto, + kill-switch) |
 | ventas_atencion | crear_cotizacion | 16-ago-2026, tenant 0 (cotización S00043 en borrador verificada, SKU inexistente → fallo explícito sin cotización parcial, + kill-switch) |
+| mentor | resumen_negocio | 17-ago-2026, tenant 0 (ventas/facturado/leads/entregas verificados exacto contra RPC directo, comparación contra período anterior, + kill-switch) |
+| mentor | estado_agentes | 17-ago-2026, tenant 0 (lista los 8 agentes reales con última actividad real desde `mail.message`, + kill-switch) |
+| mentor | crear_actividad | 17-ago-2026, tenant 0 (tarea creada y verificada en `mail.activity`, aprobacion=confirmar respetada, + kill-switch) |
 
-**Ventas & Atención 24/7 completa: 9 de 9 herramientas implementadas y probadas en vivo.**
+**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 3 de 6 probadas.
+
+`registrar_decision` de Mentor sigue bloqueada — no es un bug: la app
+**Documentos** de Odoo está `state='uninstalled'` en este tenant
+(confirmado con `ir.module.module`, no asumido) — el modelo
+`documents.document` ni siquiera existe todavía. Instalar una app nueva
+en el Odoo real de Efficax es una decisión de negocio, pendiente de que
+Alberto confirme si instalarla.
 
 Código listo, pendiente de prueba en vivo
 ------------------------------------------
 
-El API key de RPC venció (16-ago-2026, ~19:00 — vencimiento corto
-documentado en `docs/ACCESOS-2026-08-15.md`). Estas herramientas de
-`mentor` están escritas y pasan los tests locales (guarda primero, sin
-`sudo()` indebido, sin clases de excepción no disponibles, esquema
-traducible), pero **no cuentan como "implementadas" todavía** — falta la
-prueba en vivo (vigente + kill-switch) para eso, según la regla de arriba:
-
 | Agente | Herramienta | Código listo | Pendiente |
 |---|---|---|---|
-| mentor | resumen_negocio | sí | prueba en vivo con key nuevo |
-| mentor | estado_agentes | sí | prueba en vivo con key nuevo |
-| mentor | registrar_decision | sí | prueba en vivo **+ verificar campos de `documents.document`** (app Enterprise no explorada aún esta sesión — ver docstring del archivo) |
-| mentor | crear_actividad | sí | prueba en vivo con key nuevo |
-
+| mentor | registrar_decision | sí | app Documentos instalada + prueba en vivo (ver nota arriba) |
 | dashboard_kpis | calcular_kpi | sí | prueba en vivo con key nuevo |
 | dashboard_kpis | revision_mensual | sí | prueba en vivo con key nuevo (solo lectura, sin escritura en Odoo) |
 | dashboard_kpis | construir_dashboard | sí (incierto) | prueba en vivo **+ formato o-spreadsheet no verificado** — crea un dashboard placeholder, no gráficos reales todavía (ver docstring) |
@@ -62,8 +66,9 @@ README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
 existe todavía).
 
-Las otras 39 herramientas del catálogo (de 58 en total: 9 probadas + 10
-con código listo pendiente de prueba) siguen como esqueletos. Ya no hay
+Las otras 39 herramientas del catálogo (de 58 en total: 12 probadas en
+vivo + 5 con código listo pendiente de prueba + 2 con lógica pura de
+servidor_control ya testeada) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
