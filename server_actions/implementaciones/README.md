@@ -26,7 +26,32 @@ Estado
 
 **Ventas & Atención 24/7 completa: 9 de 9 herramientas implementadas y probadas en vivo.**
 
-Las otras 49 herramientas del catálogo siguen como esqueletos. Ya no hay
+Código listo, pendiente de prueba en vivo
+------------------------------------------
+
+El API key de RPC venció (16-ago-2026, ~19:00 — vencimiento corto
+documentado en `docs/ACCESOS-2026-08-15.md`). Estas herramientas de
+`mentor` están escritas y pasan los tests locales (guarda primero, sin
+`sudo()` indebido, sin clases de excepción no disponibles, esquema
+traducible), pero **no cuentan como "implementadas" todavía** — falta la
+prueba en vivo (vigente + kill-switch) para eso, según la regla de arriba:
+
+| Agente | Herramienta | Código listo | Pendiente |
+|---|---|---|---|
+| mentor | resumen_negocio | sí | prueba en vivo con key nuevo |
+| mentor | estado_agentes | sí | prueba en vivo con key nuevo |
+| mentor | registrar_decision | sí | prueba en vivo **+ verificar campos de `documents.document`** (app Enterprise no explorada aún esta sesión — ver docstring del archivo) |
+| mentor | crear_actividad | sí | prueba en vivo con key nuevo |
+
+Quedan 2 de las 6 de Mentor sin tocar: `actualizar_perfil_acceso` y
+`abrir_ticket_efficax` — ambas `ejecuta: "servidor_control"`, no Server
+Action. Su lógica de decisión (validación + armado del payload, sin red)
+ya está en `servidor_control/app/mentor/` con tests propios — ver el
+README de `servidor_control/` para el detalle de qué falta para que sean
+invocables de verdad (integración XML-RPC + registro de tenants, ninguno
+existe todavía).
+
+Las otras 47 herramientas del catálogo siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
