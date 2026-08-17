@@ -82,14 +82,16 @@ else:
             return valor, str(ganados) + ' ganado(s) entre ' + str(total_leads) + ' lead(s) x 100 = ' + str(valor) + '%'
 
         if nombre == 'margen_bruto':
-            Report = env['sale.report']
-            lineas = Report.search([
-                ('order_id', 'in', ordenes.ids),
-            ])
-            margen = sum(lineas.mapped('margin')) if lineas else 0.0
-            ventas = sum(ordenes.mapped('amount_total'))
+            # sale.report no tiene 'margin' ni 'order_id' en este tenant (modulo
+            # sale_margin no instalado, confirmado con fields_get) -- se calcula
+            # a mano: subtotal de linea menos costo estandar del producto x cantidad.
+            Linea = env['sale.order.line']
+            lineas = Linea.search([('order_id', 'in', ordenes.ids)])
+            ventas = sum(lineas.mapped('price_subtotal'))
+            costo = sum(l.product_uom_qty * l.product_id.standard_price for l in lineas)
+            margen = ventas - costo
             valor = (margen / ventas * 100) if ventas else 0.0
-            return valor, 'margen total ' + str(margen) + ' entre ventas totales ' + str(ventas) + ' x 100 = ' + str(valor) + '%'
+            return valor, 'margen (subtotal ' + str(ventas) + ' - costo estandar ' + str(costo) + ' = ' + str(margen) + ') entre ventas ' + str(ventas) + ' x 100 = ' + str(valor) + '%'
 
         # valor_inventario: no depende del periodo, es una foto del momento actual.
         Quant = env['stock.quant']

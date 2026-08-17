@@ -78,10 +78,14 @@ else:
             ganados = len(leads_periodo.filtered(lambda l_: l_.stage_id.is_won))
             return (ganados / total_leads * 100) if total_leads else 0.0
         if nombre == 'margen_bruto':
-            Report = env['sale.report']
-            lineas = Report.search([('order_id', 'in', ordenes.ids)])
-            margen = sum(lineas.mapped('margin')) if lineas else 0.0
-            ventas = sum(ordenes.mapped('amount_total'))
+            # sale.report no tiene 'margin' ni 'order_id' en este tenant (modulo
+            # sale_margin no instalado, confirmado con fields_get) -- se calcula
+            # a mano: subtotal de linea menos costo estandar del producto x cantidad.
+            Linea = env['sale.order.line']
+            lineas = Linea.search([('order_id', 'in', ordenes.ids)])
+            ventas = sum(lineas.mapped('price_subtotal'))
+            costo = sum(l.product_uom_qty * l.product_id.standard_price for l in lineas)
+            margen = ventas - costo
             return (margen / ventas * 100) if ventas else 0.0
         Quant = env['stock.quant']
         quants = Quant.search([('location_id.usage', '=', 'internal')])

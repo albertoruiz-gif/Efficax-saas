@@ -32,16 +32,27 @@ no reproducirle esta misma fricción al cliente real).
 | mentor | estado_agentes | 17-ago-2026, tenant 0 (lista los 8 agentes reales con última actividad real desde `mail.message`, + kill-switch) |
 | mentor | crear_actividad | 17-ago-2026, tenant 0 (tarea creada y verificada en `mail.activity`, aprobacion=confirmar respetada, + kill-switch) |
 | mentor | registrar_decision | 17-ago-2026, tenant 0 (app Documentos instalada por decisión explícita de Alberto — `button_immediate_install` sobre `ir.module.module`; carpeta "05_decisiones" creada como `documents.document` tipo folder; decisión registrada con contexto verificada exacta contra `ir.attachment.raw` incluyendo la línea de contexto agregada por el agente, + kill-switch: intento de registrar una segunda decisión con la llave vencida devolvió "Servicio suspendido — contacta a Efficax", conteo de documentos en la carpeta se mantuvo en 1) |
+| dashboard_kpis | calcular_kpi | 17-ago-2026, tenant 0 (5 de 5 KPIs verificados exacto contra RPC directo: ventas_totales, ticket_promedio, tasa_conversion, valor_inventario, y margen_bruto tras corregirlo — ver bug abajo; + kill-switch) |
+| dashboard_kpis | revision_mensual | 17-ago-2026, tenant 0 (comparación 2025-05 vs 2025-04 correcta tras el mismo fix de margen_bruto, propuesta de candidatos a revisión con el umbral 20% verificada, + kill-switch) |
 
-**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas.
+**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 2 de 4 probadas.
+
+**Bug real encontrado y corregido en `margen_bruto` (17-ago-2026):** el código
+original usaba `env['sale.report'].search([('order_id', 'in', ...)])` y
+`.mapped('margin')` — ninguno de los dos campos existe en este tenant
+(`sale.report` no tiene `order_id` ni `margin`; confirmado con `fields_get`,
+no asumido — el módulo `sale_margin` no está instalado). Corregido en
+`calcular_kpi.py` y `revision_mensual.py` calculando el margen a mano desde
+`sale.order.line`: `price_subtotal` menos `product_uom_qty * product_id.standard_price`.
+Verificado en vivo contra RPC directo (95913.0 de ventas, 0.0 de costo porque
+los productos de este tenant no tienen `standard_price` configurado — dato
+real, no bug de la herramienta — margen 100%).
 
 Código listo, pendiente de prueba en vivo
 ------------------------------------------
 
 | Agente | Herramienta | Código listo | Pendiente |
 |---|---|---|---|
-| dashboard_kpis | calcular_kpi | sí | prueba en vivo con key nuevo |
-| dashboard_kpis | revision_mensual | sí | prueba en vivo con key nuevo (solo lectura, sin escritura en Odoo) |
 | dashboard_kpis | construir_dashboard | sí (incierto) | prueba en vivo **+ formato o-spreadsheet no verificado** — crea un dashboard placeholder, no gráficos reales todavía (ver docstring) |
 | dashboard_kpis | alerta_umbral | sí (incierto) | prueba en vivo **+ campos de `base.automation` no verificados** (trigger periódico asumido, ver docstring) |
 
@@ -59,8 +70,8 @@ README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
 existe todavía).
 
-Las otras 39 herramientas del catálogo (de 58 en total: 13 probadas en
-vivo + 4 con código listo pendiente de prueba + 2 con lógica pura de
+Las otras 39 herramientas del catálogo (de 58 en total: 15 probadas en
+vivo + 2 con código listo pendiente de prueba + 2 con lógica pura de
 servidor_control ya testeada) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
