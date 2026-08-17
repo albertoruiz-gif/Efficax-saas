@@ -31,22 +31,15 @@ no reproducirle esta misma fricción al cliente real).
 | mentor | resumen_negocio | 17-ago-2026, tenant 0 (ventas/facturado/leads/entregas verificados exacto contra RPC directo, comparación contra período anterior, + kill-switch) |
 | mentor | estado_agentes | 17-ago-2026, tenant 0 (lista los 8 agentes reales con última actividad real desde `mail.message`, + kill-switch) |
 | mentor | crear_actividad | 17-ago-2026, tenant 0 (tarea creada y verificada en `mail.activity`, aprobacion=confirmar respetada, + kill-switch) |
+| mentor | registrar_decision | 17-ago-2026, tenant 0 (app Documentos instalada por decisión explícita de Alberto — `button_immediate_install` sobre `ir.module.module`; carpeta "05_decisiones" creada como `documents.document` tipo folder; decisión registrada con contexto verificada exacta contra `ir.attachment.raw` incluyendo la línea de contexto agregada por el agente, + kill-switch: intento de registrar una segunda decisión con la llave vencida devolvió "Servicio suspendido — contacta a Efficax", conteo de documentos en la carpeta se mantuvo en 1) |
 
-**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 3 de 6 probadas.
-
-`registrar_decision` de Mentor sigue bloqueada — no es un bug: la app
-**Documentos** de Odoo está `state='uninstalled'` en este tenant
-(confirmado con `ir.module.module`, no asumido) — el modelo
-`documents.document` ni siquiera existe todavía. Instalar una app nueva
-en el Odoo real de Efficax es una decisión de negocio, pendiente de que
-Alberto confirme si instalarla.
+**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas.
 
 Código listo, pendiente de prueba en vivo
 ------------------------------------------
 
 | Agente | Herramienta | Código listo | Pendiente |
 |---|---|---|---|
-| mentor | registrar_decision | sí | app Documentos instalada + prueba en vivo (ver nota arriba) |
 | dashboard_kpis | calcular_kpi | sí | prueba en vivo con key nuevo |
 | dashboard_kpis | revision_mensual | sí | prueba en vivo con key nuevo (solo lectura, sin escritura en Odoo) |
 | dashboard_kpis | construir_dashboard | sí (incierto) | prueba en vivo **+ formato o-spreadsheet no verificado** — crea un dashboard placeholder, no gráficos reales todavía (ver docstring) |
@@ -66,8 +59,8 @@ README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
 existe todavía).
 
-Las otras 39 herramientas del catálogo (de 58 en total: 12 probadas en
-vivo + 5 con código listo pendiente de prueba + 2 con lógica pura de
+Las otras 39 herramientas del catálogo (de 58 en total: 13 probadas en
+vivo + 4 con código listo pendiente de prueba + 2 con lógica pura de
 servidor_control ya testeada) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
@@ -136,6 +129,12 @@ Cómo se prueba en vivo (patrón establecido 15-ago-2026)
   solo. Perú es UTC-5 fijo (sin horario de verano) — confirmado en vivo en
   `agendar_reunion.py`: sin el offset, un evento pedido a las 15:00 Lima
   quedaba guardado (y mostrado) a las 10:00 Lima, 5 horas antes.
+- `registrar_decision` necesitaba la app **Documentos** (`documents.document`),
+  que estaba `state='uninstalled'` en este tenant. Se instaló con
+  `ir.module.module.button_immediate_install` por decisión explícita de
+  Alberto (17-ago-2026) — confirmado el schema real con `fields_get` antes
+  de dar por buenos los nombres de campo que ya estaban en el código
+  (`type`, `folder_id`, `attachment_id`, `name`: coincidieron).
 - Este tenant tiene productos con `company_id` fijado a una compañía
   específica (ej. los SKU `HSK-*` pertenecen a "Haskell_Distribuidor").
   Un `sale.order` creado sin pasar `company_id` toma la compañía del
