@@ -36,8 +36,54 @@ no reproducirle esta misma fricción al cliente real).
 | dashboard_kpis | revision_mensual | 17-ago-2026, tenant 0 (comparación 2025-05 vs 2025-04 correcta tras el mismo fix de margen_bruto, propuesta de candidatos a revisión con el umbral 20% verificada, + kill-switch) |
 | dashboard_kpis | construir_dashboard | 17-ago-2026, tenant 0 (dashboard gerencial creado y verificado — ver bug de `dashboard_group_id` abajo, contenido real o-spreadsheet sigue como placeholder honesto, + kill-switch) |
 | dashboard_kpis | alerta_umbral | 17-ago-2026, tenant 0 (reescrita de `base.automation` a `ir.cron` — ver bug abajo; alerta creada, disparada a mano con `ir.cron.method_direct_trigger()`, generó la `mail.activity` real con el valor correcto del KPI 47316.85 < 1,000,000, + kill-switch) |
+| rrhh | crear_puesto | 17-ago-2026, tenant 0 (puesto creado en `hr.job` con `contract_type_id` correcto vía `env.ref` tras corregir el bug de idioma — ver abajo, + kill-switch) |
+| rrhh | resumen_candidato | 17-ago-2026, tenant 0 (datos estructurados del candidato + requisitos del puesto verificados exactos, sin inventar un resumen de un CV que no puede leer, + kill-switch) |
+| rrhh | programar_entrevista | 17-ago-2026, tenant 0 (evento creado y enlazado al candidato vía `res_model`/`res_id`, corregido a mano un error de 5h por doble conversión — ver riesgo abierto abajo, + kill-switch) |
+| rrhh | checklist_onboarding | 17-ago-2026, tenant 0 (3 actividades día 1/semana 1/mes 1 creadas con fechas exactas vía `activity_schedule`, + kill-switch) |
+| rrhh | cuadro_meritos | 17-ago-2026, tenant 0 (ranking por matching_score/estrellas verificado, descartados excluidos por default, + kill-switch) |
+| rrhh | avanzar_etapa | 17-ago-2026, tenant 0 (etapa avanzada solo con verificación registrada, constancia dejada en el chatter del candidato vía `message_post`, + kill-switch) |
+| rrhh | file_contratacion | 17-ago-2026, tenant 0 (pieza archivada en expediente `Reclutamiento/<candidato>` recién creado, contenido verificado exacto, + kill-switch) |
+| rrhh | registrar_memo | 17-ago-2026, tenant 0 (memo archivado en la carpeta nativa `Employees - <compañía>/<empleado>/Memos`, estado `pendiente_acuse` + recordatorio a 7 días agendado, + kill-switch) |
 
 **Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 4 de 4 probadas.
+**rrhh: 8 de 9 probadas** (queda `publicar_linkedin`, `ejecuta: "servidor_control"` —
+ver más abajo, mismo caso que los 2 pendientes de Mentor).
+
+**Bug real en `crear_puesto` (17-ago-2026) — nombres traducidos, no en
+inglés:** la primera versión buscaba `hr.contract.type` por nombre en
+inglés a secas (`('name', '=', 'Full-Time')`). Este tenant corre en
+`es_ES` (idioma real del usuario, `res.users.lang`) y `name` en
+`hr.contract.type`/`hr.recruitment.stage`/`hr.job` es un campo
+**traducido** — confirmado leyendo el mismo registro con
+`context={'lang': 'es_ES'}` vs `'en_US'`: el mismo id se llama "Full-Time"
+en inglés y "Tiempo completo" en español. Buscar el string en inglés bajo
+el contexto real en español no encontraba nada, y el código creaba un
+tipo NUEVO y duplicado con el nombre en inglés cada vez (pasó en vivo:
+`hr.contract.type` id 13 duplicó al id 4). Corregido usando `env.ref(...)`
+con el XML ID real de cada tipo estándar (`hr.contract_type_full_time`,
+confirmados con `ir.model.data`, no adivinados) — independiente del
+idioma. **Lección general, no solo de esta herramienta:** cualquier
+`search([('name', '=', ...)])` contra un modelo estándar de Odoo con
+campo `name` traducible es frágil en un tenant que no está en inglés; si
+existe un XML ID conocido, usarlo con `env.ref()` en vez de buscar por
+nombre.
+
+**Riesgo real confirmado, NO resuelto del todo, en `programar_entrevista`
+(17-ago-2026):** pedí "15:00 hora Lima" y el evento quedó guardado 5
+horas tarde — el doble del offset manual (+5h) que aplica el código.
+Causa: el catálogo no le dice al modelo de IA en qué convención debe
+entregar `fecha_hora` (sin `description` en esa propiedad) — esta vez el
+agente parece haber convertido la hora a UTC por su cuenta antes de
+llamar la herramienta, y el código sumó +5h otra vez sobre ese valor ya
+convertido. En la prueba de `agendar_reunion.py` (misma lógica) el
+agente NO había pre-convertido y salió bien — el comportamiento del
+modelo no es consistente entre llamadas. Arreglarlo de raíz requiere
+agregar una `description` explícita al campo en el catálogo (cross-repo,
+ver `server_actions/README.md`) pidiendo la hora local sin convertir;
+documentado como pendiente, no inventado un parche a medias acá. Mientras
+tanto, cualquier prueba en vivo de una herramienta con conversión manual
+de zona horaria debe verificar el valor final contra RPC, no confiar en
+que "ya funcionó una vez".
 
 **Bug real encontrado y corregido en `margen_bruto` (17-ago-2026):** el código
 original usaba `env['sale.report'].search([('order_id', 'in', ...)])` y
@@ -94,10 +140,13 @@ Action. Su lógica de decisión (validación + armado del payload, sin red)
 ya está en `servidor_control/app/mentor/` con tests propios — ver el
 README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
-existe todavía).
+existe todavía). Lo mismo aplica a `rrhh/publicar_linkedin` (misma razón:
+`aprobacion: "dueno"` + credenciales OAuth de LinkedIn por tenant, que
+tendría que guardar el Servidor de Control, no el sandbox del cliente) —
+su lógica de decisión pura vive en `servidor_control/app/rrhh/`.
 
-Las otras 39 herramientas del catálogo (de 58 en total: 15 probadas en
-vivo + 2 con código listo pendiente de prueba + 2 con lógica pura de
+Las otras 38 herramientas del catálogo (de 58 en total: 23 probadas en
+vivo + 0 con código listo pendiente de prueba + 3 con lógica pura de
 servidor_control ya testeada) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
@@ -131,6 +180,27 @@ Contexto imprescindible antes de escribir una nueva
   `ir.model`, que es un modelo técnico oculto por defecto). Con
   `activity_schedule` (que resuelve el tipo vía `env.ref`, de uso general)
   funcionó a la primera.
+- Este tenant corre en `es_ES` (idioma real del usuario). Campos `name`
+  traducibles en modelos estándar de Odoo (`hr.contract.type`,
+  `hr.recruitment.stage`, `hr.job`, etc.) NO se pueden buscar por el
+  string en inglés — `search([('name', '=', 'Full-Time')])` devuelve
+  vacío bajo el contexto real en español (el mismo registro se llama
+  "Tiempo completo" ahí), y si el código cae a un `create()` de
+  respaldo, duplica el registro con el nombre en inglés. Si existe un
+  XML ID conocido (`ir.model.data`), usar `env.ref('modulo.xml_id')` en
+  vez de buscar por nombre — es independiente del idioma. Detectado y
+  corregido en `rrhh/crear_puesto.py`.
+- La conversión manual de zona horaria (+5h Lima→UTC) depende de que el
+  modelo de IA pase la hora LOCAL tal cual, sin convertirla — y ese
+  comportamiento no es consistente entre llamadas: en `agendar_reunion.py`
+  funcionó bien, pero en `rrhh/programar_entrevista.py` el agente
+  aparentemente pre-convirtió a UTC antes de llamar la herramienta, y el
+  +5h manual se aplicó DOS veces (evento guardado 5h tarde). No hay fix
+  de código confiable para esto sin agregar una `description` explícita
+  al campo en el catálogo (cross-repo, pendiente) — cualquier prueba en
+  vivo de una herramienta con esta conversión debe verificar el valor
+  final contra RPC, no asumir que porque funcionó una vez siempre va a
+  funcionar.
 
 Cómo se prueba en vivo (patrón establecido 15-ago-2026)
 --------------------------------------------------------
