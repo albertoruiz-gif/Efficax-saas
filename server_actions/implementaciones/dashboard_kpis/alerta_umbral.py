@@ -1,26 +1,30 @@
 """Server Action: dashboard_kpis / alerta_umbral
 
-Configura una alerta automática (`base.automation`) para cuando un KPI
-cruza el umbral pactado. Igual que `construir_dashboard.py`: hay
-incertidumbre real sobre el nombre exacto de algunos campos de
-`base.automation` (no se tocó en vivo esta sesión) — a diferencia de la
-gran mayoría de herramientas de esta noche, donde sí hubo confianza
-razonable (y los pocos errores, como `partner.mobile`, se corrigieron en
-la prueba en vivo).
+Configura una alerta automática para cuando un KPI cruza el umbral pactado.
 
-Lo que se sabe con más confianza: `base.automation` **hereda de
-`ir.actions.server`** (mismo `state='code'` + `code` que todas las demás
-Server Actions de este repo), así que la guarda y el patrón de código son
-iguales. Lo incierto es el trigger periódico: se asume `trigger='on_time'`
-con `trg_date_range`/`trg_date_range_type` (nombres típicos de Odoo 17-19
-para "cada N unidades de tiempo"), a confirmar con `fields_get` en la
-prueba en vivo.
+**Reescrita de raiz el 17-ago-2026 tras verificar en vivo que el enfoque
+original (`base.automation`) estaba mal elegido, no solo mal tipeado.**
+`base.automation` con `trigger='on_time'` ("Based on date field") evalua
+un campo Fecha/Datetime PROPIO DE CADA REGISTRO del modelo (ej. una
+actividad vence en X dias despues de su `date_deadline`) -- no sirve para
+"revisa este KPI de negocio cada N dias", que no depende de ningun campo
+fecha de un registro puntual. El mecanismo correcto de Odoo para eso es
+`ir.cron` (Acciones Planificadas): un job periodico que ejecuta `code`
+sin iterar registros. Confirmado con `fields_get`: `ir.cron` tambien
+hereda de `ir.actions.server` (mismo patron `state='code'`), asi que la
+guarda y el resto del codigo de esta herramienta no cambian de forma.
 
-El código de la automatización reusa la MISMA fórmula de KPI que
-`calcular_kpi.py` (duplicada, no importada — cada Server Action es un
-blob independiente), y notifica creando un `mail.activity` al usuario de
-`notificar_a` cuando el umbral se cruza — no manda email/whatsapp por su
-cuenta, deja una tarea visible que el humano decide cómo atender.
+De paso, el codigo generado para la automatizacion ya NO es un
+placeholder -- reusa la formula real de `calcular_kpi.py` (incluyendo el
+fix de `margen_bruto`: `sale.report` no tiene `margin` ni `order_id` en
+este tenant, se calcula a mano desde `sale.order.line`) y notifica
+creando un `mail.activity` real cuando el umbral se cruza -- no manda
+email/whatsapp por su cuenta, deja una tarea visible que el humano decide
+como atender.
+
+Probado en vivo disparando el cron manualmente con
+`ir.cron.method_direct_trigger()` (existe justo para esto, no hay que
+esperar al `nextcall` real) -- ver README para el detalle de la prueba.
 """
 
 from guarda_llave import GUARDA_TEMPLATE
@@ -58,43 +62,83 @@ else:
         ai['result'] = {'ok': False, 'mensaje': 'Hay varios usuarios que coinciden con "' + notificar_txt + '". Precisa cual: ' + '; '.join(nombres), 'datos': {}}
     else:
         nombre_alerta = 'Alerta KPI: ' + kpi_txt + ' ' + direccion_txt + ' ' + str(umbral_val)
-        modelo_base = env['ir.model'].search([('model', '=', 'res.company')], limit=1)
 
-        codigo_automatizacion = (
+        # Codigo que ejecuta el cron cada vez que corre -- MISMA formula real
+        # de calcular_kpi.py (con el fix de margen_bruto), duplicada porque
+        # cada Server Action / ir.cron es un blob independiente en el sandbox.
+        codigo_cron = (
+            "Sale = env['sale.order']\\n"
+            "hoy = datetime.date.today()\\n"
+            "desde_dt = hoy - datetime.timedelta(days=30)\\n"
+            "ordenes = Sale.search([('date_order', '>=', str(desde_dt)), ('date_order', '<=', str(hoy)), ('state', 'in', ['sale', 'done'])])\\n"
             "kpi_objetivo = '" + kpi_txt + "'\\n"
-            "umbral = " + str(umbral_val) + "\\n"
-            "direccion = '" + direccion_txt + "'\\n"
-            "usuario_id = " + str(Usuarios.id) + "\\n"
-            "# El calculo real del KPI se completa en la prueba en vivo: misma formula de calcular_kpi.py.\\n"
+            "if kpi_objetivo == 'ventas_totales':\\n"
+            "    valor_kpi = sum(ordenes.mapped('amount_total'))\\n"
+            "elif kpi_objetivo == 'ticket_promedio':\\n"
+            "    total_ = sum(ordenes.mapped('amount_total'))\\n"
+            "    n_ = len(ordenes)\\n"
+            "    valor_kpi = (total_ / n_) if n_ else 0.0\\n"
+            "elif kpi_objetivo == 'tasa_conversion':\\n"
+            "    Lead = env['crm.lead']\\n"
+            "    leads_ = Lead.search([('create_date', '>=', str(desde_dt) + ' 00:00:00'), ('create_date', '<=', str(hoy) + ' 23:59:59')])\\n"
+            "    total_leads_ = len(leads_)\\n"
+            "    ganados_ = len(leads_.filtered(lambda l_: l_.stage_id.is_won))\\n"
+            "    valor_kpi = (ganados_ / total_leads_ * 100) if total_leads_ else 0.0\\n"
+            "elif kpi_objetivo == 'margen_bruto':\\n"
+            "    Linea = env['sale.order.line']\\n"
+            "    lineas_ = Linea.search([('order_id', 'in', ordenes.ids)])\\n"
+            "    ventas_ = sum(lineas_.mapped('price_subtotal'))\\n"
+            "    costo_ = sum(l_.product_uom_qty * l_.product_id.standard_price for l_ in lineas_)\\n"
+            "    valor_kpi = ((ventas_ - costo_) / ventas_ * 100) if ventas_ else 0.0\\n"
+            "else:\\n"
+            "    Quant = env['stock.quant']\\n"
+            "    quants_ = Quant.search([('location_id.usage', '=', 'internal')])\\n"
+            "    valor_kpi = sum(q_.quantity * q_.product_id.standard_price for q_ in quants_)\\n"
+            "umbral_ = " + repr(umbral_val) + "\\n"
+            "cruzado = (valor_kpi < umbral_) if '" + direccion_txt + "' == 'por_debajo' else (valor_kpi > umbral_)\\n"
+            "if cruzado:\\n"
+            "    modelo_ = env['ir.model']._get('res.company')\\n"
+            "    env['mail.activity'].create({\\n"
+            "        'res_model_id': modelo_.id,\\n"
+            "        'res_id': env.company.id,\\n"
+            "        'activity_type_id': env.ref('mail.mail_activity_data_todo').id,\\n"
+            "        'user_id': " + str(Usuarios.id) + ",\\n"
+            "        'summary': 'Alerta KPI: " + kpi_txt + " " + direccion_txt + " de " + str(umbral_val) + "',\\n"
+            "        'note': kpi_objetivo + ' = ' + str(valor_kpi) + ' (umbral " + direccion_txt + " " + str(umbral_val) + ")',\\n"
+            "    })\\n"
         )
 
-        Automation = env['base.automation']
-        existente = Automation.search([('name', '=', nombre_alerta)], limit=1)
+        modelo_res_company = env['ir.model'].search([('model', '=', 'res.company')], limit=1)
+
+        Cron = env['ir.cron']
+        existente = Cron.search([('name', '=', nombre_alerta)], limit=1)
         valores = {
             'name': nombre_alerta,
-            'model_id': modelo_base.id,
-            'trigger': 'on_time',
-            'trg_date_range': 1,
-            'trg_date_range_type': 'days',
+            'model_id': modelo_res_company.id,
             'state': 'code',
-            'code': codigo_automatizacion,
+            'code': codigo_cron,
+            'interval_number': 1,
+            'interval_type': 'days',
+            'nextcall': (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
+            'user_id': env.user.id,
+            'active': True,
         }
         if existente:
             existente.write(valores)
             registro = existente
             accion_txt = 'actualizada'
         else:
-            registro = Automation.create(valores)
+            registro = Cron.create(valores)
             accion_txt = 'creada'
 
         ai['result'] = {
             'ok': True,
             'mensaje': (
                 'Alerta ' + accion_txt + ': ' + kpi_txt + ' ' + direccion_txt + ' de ' + str(umbral_val) +
-                ', notifica a ' + Usuarios.name + '. '
-                'ATENCION: la evaluacion periodica real del KPI queda pendiente de completar en la prueba en vivo.'
+                ', se revisa una vez al dia (ultimos 30 dias moviles) y notifica a ' + Usuarios.name +
+                ' con una tarea si se cruza el umbral.'
             ),
-            'datos': {'automatizacion_id': registro.id, 'kpi': kpi_txt, 'umbral': umbral_val, 'notificar_a_id': Usuarios.id},
+            'datos': {'cron_id': registro.id, 'kpi': kpi_txt, 'umbral': umbral_val, 'notificar_a_id': Usuarios.id},
         }
 '''
 

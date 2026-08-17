@@ -34,8 +34,10 @@ no reproducirle esta misma fricción al cliente real).
 | mentor | registrar_decision | 17-ago-2026, tenant 0 (app Documentos instalada por decisión explícita de Alberto — `button_immediate_install` sobre `ir.module.module`; carpeta "05_decisiones" creada como `documents.document` tipo folder; decisión registrada con contexto verificada exacta contra `ir.attachment.raw` incluyendo la línea de contexto agregada por el agente, + kill-switch: intento de registrar una segunda decisión con la llave vencida devolvió "Servicio suspendido — contacta a Efficax", conteo de documentos en la carpeta se mantuvo en 1) |
 | dashboard_kpis | calcular_kpi | 17-ago-2026, tenant 0 (5 de 5 KPIs verificados exacto contra RPC directo: ventas_totales, ticket_promedio, tasa_conversion, valor_inventario, y margen_bruto tras corregirlo — ver bug abajo; + kill-switch) |
 | dashboard_kpis | revision_mensual | 17-ago-2026, tenant 0 (comparación 2025-05 vs 2025-04 correcta tras el mismo fix de margen_bruto, propuesta de candidatos a revisión con el umbral 20% verificada, + kill-switch) |
+| dashboard_kpis | construir_dashboard | 17-ago-2026, tenant 0 (dashboard gerencial creado y verificado — ver bug de `dashboard_group_id` abajo, contenido real o-spreadsheet sigue como placeholder honesto, + kill-switch) |
+| dashboard_kpis | alerta_umbral | 17-ago-2026, tenant 0 (reescrita de `base.automation` a `ir.cron` — ver bug abajo; alerta creada, disparada a mano con `ir.cron.method_direct_trigger()`, generó la `mail.activity` real con el valor correcto del KPI 47316.85 < 1,000,000, + kill-switch) |
 
-**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 2 de 4 probadas.
+**Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 4 de 4 probadas.
 
 **Bug real encontrado y corregido en `margen_bruto` (17-ago-2026):** el código
 original usaba `env['sale.report'].search([('order_id', 'in', ...)])` y
@@ -48,13 +50,37 @@ Verificado en vivo contra RPC directo (95913.0 de ventas, 0.0 de costo porque
 los productos de este tenant no tienen `standard_price` configurado — dato
 real, no bug de la herramienta — margen 100%).
 
+**Bug real en `construir_dashboard` (17-ago-2026):** `spreadsheet.dashboard`
+tiene `dashboard_group_id` como campo **obligatorio** (`fields_get`,
+`required: True`) — la primera versión del código no lo incluía y hubiera
+fallado el `create()`. Corregido buscando/creando un grupo propio
+"Efficax — KPIs" (no se reutiliza un grupo estándar de Odoo como
+Sales/Finance). El contenido real del dashboard (formato o-spreadsheet,
+~56 KB de JSON en uno existente, revisado en vivo) sigue como placeholder
+honesto — confirmado que reconstruirlo a mano no es viable en el tiempo
+de esta sesión.
+
+**Bug real en `alerta_umbral` (17-ago-2026) — el enfoque original estaba
+mal elegido, no solo mal tipeado:** la primera versión usaba
+`base.automation` con `trigger='on_time'`, que evalúa un campo Fecha/
+Datetime PROPIO DE CADA REGISTRO (ej. actividades que vencen X días
+después de su `date_deadline`) — no sirve para "revisa este KPI de
+negocio cada N días", que no depende de ningún campo fecha de un
+registro puntual. Reescrita para usar `ir.cron` (Acciones Planificadas),
+el mecanismo correcto de Odoo para jobs periódicos con `code` propio
+(también hereda de `ir.actions.server`, mismo patrón). De paso se
+completó la lógica real de cálculo de KPI + notificación (antes era un
+placeholder comentado) y se probó disparando el cron a mano con
+`ir.cron.method_direct_trigger()` — no hace falta esperar al `nextcall`
+real para probarlo en vivo. El cron de prueba se dejó **desactivado**
+(`active=False`) después de confirmar que funciona, para no generarle a
+Alberto una tarea diaria real con un umbral que era solo de prueba.
+
 Código listo, pendiente de prueba en vivo
 ------------------------------------------
 
-| Agente | Herramienta | Código listo | Pendiente |
-|---|---|---|---|
-| dashboard_kpis | construir_dashboard | sí (incierto) | prueba en vivo **+ formato o-spreadsheet no verificado** — crea un dashboard placeholder, no gráficos reales todavía (ver docstring) |
-| dashboard_kpis | alerta_umbral | sí (incierto) | prueba en vivo **+ campos de `base.automation` no verificados** (trigger periódico asumido, ver docstring) |
+**dashboard_kpis completo: 4 de 4 probadas en vivo.** No queda ninguna
+herramienta de este agente en la tabla de "código listo, pendiente".
 
 `calcular_kpi`/`revision_mensual` comparten un catálogo fijo de 5 KPIs
 (ventas_totales, ticket_promedio, tasa_conversion, margen_bruto,
