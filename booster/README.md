@@ -9,6 +9,35 @@ Spec: `EFFICAX_IA/Agentes_SAAS/agentes_v2/01-booster-implementador.md` (fuera de
 este repo, ver `server_actions/README.md` sobre esta dependencia cross-repo) +
 RFD v2.9 §4.
 
+## Requisito de diseño: TODOS los accesos se piden UNA sola vez (17-ago-2026)
+
+Detectado en carne propia esta sesión: el key de RPC de Odoo venció a
+mitad de trabajo y hubo que parar para pedir uno nuevo — exactamente el
+tipo de fricción tediosa y desmotivante que Booster existe para eliminar
+("dejar el Odoo operando... sin consultores", spec §Naturaleza). Pedirle
+al cliente credenciales/accesos de a poco, sobre la marcha, es un defecto
+de diseño, no un detalle menor.
+
+**Regla para cuando se construya la Fase 3 (Provisioning):** el wizard
+tiene que levantar, en un solo checkpoint, TODO lo que Booster vaya a
+necesitar durante toda la implementación — no volver a pedir nada después
+salvo que el cliente agregue una capacidad nueva (upgrade). Inventario de
+accesos conocidos hasta ahora que deberían pedirse juntos ahí:
+
+- Odoo: usuario técnico + API key (idealmente sin expiración corta, o con
+  renovación automatizada por el propio Servidor de Control — no manual).
+- Facturación electrónica Perú: credenciales OSE/PSE (si el cliente ya
+  tiene proveedor propio) o iniciar el trámite guiado (Fase 1).
+- Pagos: credenciales de Mercado Pago / Culqi (recetas de Fase 3).
+- Dominio/correo: acceso DNS si se va a configurar dominio propio
+  (instructivos Pack 360, Fase 1).
+- Marketing (si el cliente activó ese agente): códigos de píxel de
+  Meta/TikTok/LinkedIn (Fase 4).
+
+Ninguno de estos accesos existe todavía en el wizard porque la Fase 3 no
+está construida — este bloque queda como checklist obligatorio para esa
+fase, no como algo a resolver ahora.
+
 ## Por qué no es un addon con `__manifest__.py` (decisión, no olvido)
 
 El plan original era un addon Odoo instalable de verdad. Se descartó
