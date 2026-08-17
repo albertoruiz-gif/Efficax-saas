@@ -43,6 +43,17 @@ prueba en vivo (vigente + kill-switch) para eso, según la regla de arriba:
 | mentor | registrar_decision | sí | prueba en vivo **+ verificar campos de `documents.document`** (app Enterprise no explorada aún esta sesión — ver docstring del archivo) |
 | mentor | crear_actividad | sí | prueba en vivo con key nuevo |
 
+| dashboard_kpis | calcular_kpi | sí | prueba en vivo con key nuevo |
+| dashboard_kpis | revision_mensual | sí | prueba en vivo con key nuevo (solo lectura, sin escritura en Odoo) |
+| dashboard_kpis | construir_dashboard | sí (incierto) | prueba en vivo **+ formato o-spreadsheet no verificado** — crea un dashboard placeholder, no gráficos reales todavía (ver docstring) |
+| dashboard_kpis | alerta_umbral | sí (incierto) | prueba en vivo **+ campos de `base.automation` no verificados** (trigger periódico asumido, ver docstring) |
+
+`calcular_kpi`/`revision_mensual` comparten un catálogo fijo de 5 KPIs
+(ventas_totales, ticket_promedio, tasa_conversion, margen_bruto,
+valor_inventario) — el "contrato de KPIs" real que Booster define en su
+Fase 4 todavía no existe, así que no se inventa; cuando exista, este
+catálogo fijo se reemplaza por esa fuente.
+
 Quedan 2 de las 6 de Mentor sin tocar: `actualizar_perfil_acceso` y
 `abrir_ticket_efficax` — ambas `ejecuta: "servidor_control"`, no Server
 Action. Su lógica de decisión (validación + armado del payload, sin red)
@@ -51,7 +62,8 @@ README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
 existe todavía).
 
-Las otras 47 herramientas del catálogo siguen como esqueletos. Ya no hay
+Las otras 39 herramientas del catálogo (de 58 en total: 9 probadas + 10
+con código listo pendiente de prueba) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio
