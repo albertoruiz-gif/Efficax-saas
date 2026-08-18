@@ -186,9 +186,14 @@ definida, solo faltaba conectarla con "cómo empieza el prospecto".
 
 ## Lo que sigue pendiente de decisión de Alberto
 
-1. **Confirmar qué es "el paquete 3"** — ¿el tercer camino (cliente con
-   Odoo preexistente) o un plan/precio específico no encontrado en el
-   spec cross-repo?
+1. ~~Confirmar qué es "el paquete 3"~~ — **resuelto (17-ago-2026):**
+   Alberto confirmó que es un plan/paquete de precio específico, no el
+   camino C de onboarding. Sigue pendiente la referencia real: no está
+   definido en el spec cross-repo disponible en este repo (RFD,
+   01-booster-implementador.md) — falta que Alberto pase el documento
+   o enlace de Casa Efficax donde esté especificado "Paquete 3" (qué
+   agentes/servicios incluye, y si cambia algo del flujo de onboarding
+   de arriba) antes de poder documentar su impacto acá.
 2. Qué servicios del checklist de accesos pueden activarse en modo
    trial/sandbox desde el clic inicial, y cuáles esperan a Fase 3.
 3. ¿El chat de Booster se auto-abre al primer login del trial, o
