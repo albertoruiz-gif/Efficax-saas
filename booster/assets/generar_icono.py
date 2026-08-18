@@ -90,17 +90,18 @@ def construir_icono():
     tam_render = LADO_FINAL * ESCALA
     lienzo = Image.new("RGBA", (tam_render, tam_render), (0, 0, 0, 0))
 
-    # Tile oscuro SIN esquinas redondeadas (a pedido de Alberto,
-    # 18-ago-2026): con esquinas redondeadas, la tarjeta blanca del grid
-    # de apps de Odoo se veia por detras justo en las 4 esquinas -- un
-    # cuadrado negro completo, de borde a borde, elimina ese hueco por
-    # completo. Borde naranja de marca alrededor, igual que antes.
+    # Tile redondeado oscuro (mismo look que un icono de app real: fondo
+    # solido, esquinas redondeadas, borde naranja para distinguirse).
+    radio_tile = round(tam_render * 0.22)
     grosor_borde = round(tam_render * 0.018)
     tile = Image.new("RGBA", (tam_render, tam_render), (0, 0, 0, 0))
     draw_tile = ImageDraw.Draw(tile)
-    draw_tile.rectangle([0, 0, tam_render - 1, tam_render - 1], fill=NEGRO_TILE)
-    draw_tile.rectangle(
+    draw_tile.rounded_rectangle(
+        [0, 0, tam_render - 1, tam_render - 1], radius=radio_tile, fill=NEGRO_TILE
+    )
+    draw_tile.rounded_rectangle(
         [grosor_borde // 2, grosor_borde // 2, tam_render - 1 - grosor_borde // 2, tam_render - 1 - grosor_borde // 2],
+        radius=radio_tile,
         outline=BORDE_NARANJA,
         width=grosor_borde,
     )
