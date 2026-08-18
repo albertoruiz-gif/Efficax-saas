@@ -23,6 +23,14 @@ el mismo código sirve la URL real sin cambios.
 email si `contacto` parece uno) con el mismo patrón "nunca inventar" que
 el resto de herramientas — ambiguo o no encontrado se lo decimos al
 usuario, no se adivina.
+
+**Corrección de diseño (17-ago-2026):** `fecha_hora` llega en hora LOCAL
+de quien habla con el agente. La conversión a UTC ya NO hardcodea el
+offset de Perú (+5h) — se lee `env.user.tz_offset` (Odoo lo calcula por
+usuario a partir de su zona horaria configurada) para que cualquier
+tenant, en cualquier país, agende en su propia hora local sin tocar el
+código. Detalle completo del porqué en `rrhh/programar_entrevista.py`
+(misma corrección aplicada ahí primero) y en `implementaciones/README.md`.
 """
 
 from guarda_llave import GUARDA_TEMPLATE
@@ -97,16 +105,31 @@ else:
                 nombres_c = [c.name + ' (id ' + str(c.id) + ')' for c in Contactos]
                 ai['result'] = {'ok': False, 'mensaje': 'Hay varios contactos que coinciden con "' + contacto_txt + '". Precisa cual: ' + '; '.join(nombres_c), 'datos': {}}
             else:
-                # fecha_hora llega en hora local de Lima (como la dice el
-                # usuario); calendar.event.start/stop se guardan siempre en
+                # fecha_hora llega en hora LOCAL de quien habla con el
+                # agente; calendar.event.start/stop se guardan siempre en
                 # UTC a nivel de ORM -- create() no convierte zona horaria
-                # por si solo (confirmado en vivo: sin este +5h, un evento a
+                # por si solo (confirmado en vivo: sin offset, un evento a
                 # las 15:00 Lima quedaba guardado y MOSTRADO como 10:00
-                # Lima -- 5 horas antes de lo pedido). Peru no tiene horario
-                # de verano, por eso el offset fijo +5h es seguro; no se usa
-                # pytz porque no esta confirmado que este disponible en el
-                # sandbox de IA (solo env/ai/datetime/UserError lo estan).
-                fecha_utc = fecha_dt + datetime.timedelta(hours=5)
+                # Lima -- 5 horas antes de lo pedido).
+                #
+                # CORRECCION DE DISENO (17-ago-2026): la primera version
+                # hardcodeaba "+timedelta(hours=5)" asumiendo que el tenant
+                # siempre iba a estar en Peru -- funcionaba en Efficax
+                # porque lo esta, pero rompe para cualquier cliente en otro
+                # pais. Corregido leyendo el offset REAL del usuario que
+                # ejecuta la herramienta (env.user.tz_offset, un campo
+                # 'char' que Odoo ya calcula por usuario a partir de su
+                # zona horaria configurada, ej. '-0500') -- asi cualquier
+                # tenant agenda en su propia hora local sin tocar codigo.
+                # No se usa pytz/zoneinfo (no disponibles en el sandbox,
+                # solo env/ai/datetime/UserError lo estan) -- no hace
+                # falta, Odoo ya hizo ese calculo por nosotros.
+                offset_txt = (env.user.tz_offset or '+0000').strip()
+                signo_offset = -1 if offset_txt[:1] == '-' else 1
+                horas_offset = int(offset_txt[1:3]) if len(offset_txt) >= 3 else 0
+                minutos_offset = int(offset_txt[3:5]) if len(offset_txt) >= 5 else 0
+                offset_delta = signo_offset * datetime.timedelta(hours=horas_offset, minutes=minutos_offset)
+                fecha_utc = fecha_dt - offset_delta
                 valores = {
                     'name': motivo_txt or ('Reunion con ' + contacto_txt),
                     'start': fecha_utc,
@@ -121,7 +144,7 @@ else:
                 aviso_contacto = '' if Contactos else ' (nota: "' + contacto_txt + '" no es un contacto existente, se registro solo en la descripcion, sin invitacion automatica)'
                 ai['result'] = {
                     'ok': True,
-                    'mensaje': 'Reunion agendada para el ' + str(fecha_dt) + ' hora Lima.' + aviso_contacto,
+                    'mensaje': 'Reunion agendada para el ' + str(fecha_dt) + ' hora local.' + aviso_contacto,
                     'datos': {'evento_id': evento.id, 'vendedor_id': Vendedores.id},
                 }
 '''

@@ -70,11 +70,11 @@ nombre.
 
 **Riesgo real confirmado, NO resuelto del todo, en `programar_entrevista`
 (17-ago-2026):** pedí "15:00 hora Lima" y el evento quedó guardado 5
-horas tarde — el doble del offset manual (+5h) que aplica el código.
-Causa: el catálogo no le dice al modelo de IA en qué convención debe
-entregar `fecha_hora` (sin `description` en esa propiedad) — esta vez el
-agente parece haber convertido la hora a UTC por su cuenta antes de
-llamar la herramienta, y el código sumó +5h otra vez sobre ese valor ya
+horas tarde — el doble del offset que aplica el código. Causa: el
+catálogo no le dice al modelo de IA en qué convención debe entregar
+`fecha_hora` (sin `description` en esa propiedad) — esta vez el agente
+parece haber convertido la hora a UTC por su cuenta antes de llamar la
+herramienta, y el código sumó el offset otra vez sobre ese valor ya
 convertido. En la prueba de `agendar_reunion.py` (misma lógica) el
 agente NO había pre-convertido y salió bien — el comportamiento del
 modelo no es consistente entre llamadas. Arreglarlo de raíz requiere
@@ -84,6 +84,22 @@ documentado como pendiente, no inventado un parche a medias acá. Mientras
 tanto, cualquier prueba en vivo de una herramienta con conversión manual
 de zona horaria debe verificar el valor final contra RPC, no confiar en
 que "ya funcionó una vez".
+
+**Corrección de diseño separada, esta SÍ resuelta (17-ago-2026, a pedido
+explícito de Alberto):** el offset de zona horaria estaba hardcodeado a
+Perú (`+ timedelta(hours=5)`) en `programar_entrevista.py` y
+`agendar_reunion.py` — funcionaba porque Efficax está en Perú, pero
+hubiera roto para cualquier cliente de otro país (justo lo que Booster
+tiene que evitar: no se puede tocar código por tenant). Corregido en
+ambas herramientas leyendo `env.user.tz_offset` (campo `char` que Odoo ya
+calcula por usuario a partir de su `res.users.tz` configurado, ej.
+`'-0500'`) en vez de asumir un país fijo — reverificado en vivo contra
+RPC tras el cambio: 09:30 hora local pedida quedó guardada exacta como
+14:30 UTC (offset -0500 de Alberto), mismo resultado correcto que antes
+pero ahora derivado del usuario real, no de un número fijo en el código.
+Este fix es independiente del riesgo de doble conversión de arriba (ese
+sigue abierto) — resuelve "¿qué país asume el código?", no "¿el modelo
+respeta la convención del campo?".
 
 **Bug real encontrado y corregido en `margen_bruto` (17-ago-2026):** el código
 original usaba `env['sale.report'].search([('order_id', 'in', ...)])` y
@@ -231,11 +247,18 @@ Cómo se prueba en vivo (patrón establecido 15-ago-2026)
   automático (`test_sin_clases_de_excepcion_no_disponibles`) que revisa
   toda implementación real.
 - Cualquier campo `Datetime` con hora (no solo fecha) que reciba un valor
-  en hora local (ej. "15:00 hora Lima") hay que convertirlo a UTC A MANO
-  antes de guardarlo: `create()` no hace conversión de zona horaria por sí
-  solo. Perú es UTC-5 fijo (sin horario de verano) — confirmado en vivo en
-  `agendar_reunion.py`: sin el offset, un evento pedido a las 15:00 Lima
-  quedaba guardado (y mostrado) a las 10:00 Lima, 5 horas antes.
+  en hora local hay que convertirlo a UTC A MANO antes de guardarlo:
+  `create()` no hace conversión de zona horaria por sí solo — confirmado
+  en vivo en `agendar_reunion.py`: sin el offset, un evento pedido a las
+  15:00 quedaba guardado (y mostrado) a las 10:00, 5 horas antes. **No
+  hardcodear el offset de un país** (la primera versión asumía Perú fijo,
+  +5h, y hubiera roto para cualquier tenant en otro país) — usar
+  `env.user.tz_offset` (campo `char` que Odoo ya calcula por usuario, ej.
+  `'-0500'`) para que cada tenant agende en su propia hora local sin
+  tocar código. Sigue existiendo un riesgo distinto y no resuelto: el
+  modelo de IA a veces pre-convierte la hora a UTC por su cuenta antes de
+  llamar la herramienta, duplicando el corrimiento — ver el hallazgo de
+  `programar_entrevista.py` arriba.
 - `registrar_decision` necesitaba la app **Documentos** (`documents.document`),
   que estaba `state='uninstalled'` en este tenant. Se instaló con
   `ir.module.module.button_immediate_install` por decisión explícita de

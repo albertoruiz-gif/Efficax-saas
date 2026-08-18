@@ -6,12 +6,25 @@ candidato via `res_model`/`res_id` (así aparece en el `meeting_ids` del
 `hr.applicant`, confirmado con `fields_get`) -- mismo mecanismo que usa
 Odoo internamente para el botón "Meetings" del kanban de reclutamiento.
 
-`fecha_hora` llega en hora local de Lima -- mismo offset fijo +5h a UTC
-que `agendar_reunion.py` (ver esa herramienta y `implementaciones/README.md`
-sobre por qué el offset es fijo y seguro para Perú, sin horario de
-verano). `duracion_min` pierde su `default: 45` (Odoo no soporta
-`default`, se aplica a mano). `modo` pierde su `default: "video"`, misma
-razón.
+`fecha_hora` llega en hora LOCAL de quien habla con el agente -- el
+offset a UTC ya NO se hardcodea a Lima/Perú (ver corrección de diseño
+17-ago-2026 más abajo): se toma de `env.user.tz_offset`, un campo
+`char` que Odoo ya calcula por usuario (ej. `'-0500'`) a partir de su
+zona horaria configurada (`res.users.tz`) -- así cualquier tenant, en
+cualquier país, agenda en su propia hora local sin tocar el código.
+`duracion_min` pierde su `default: 45` (Odoo no soporta `default`, se
+aplica a mano). `modo` pierde su `default: "video"`, misma razón.
+
+**Corrección de diseño (17-ago-2026):** la primera versión de esta
+herramienta (y de `agendar_reunion.py`) hardcodeaba `+ timedelta(hours=5)`
+asumiendo que el tenant siempre iba a estar en Perú -- funcionaba en esta
+prueba porque Efficax lo está, pero rompería para cualquier cliente en
+otro país (exactamente el tipo de cosa que Booster tiene que servir sin
+tocar código por tenant). Corregido para leer el offset real del usuario
+que ejecuta la herramienta (`env.user.tz_offset`) en vez de asumir un
+país fijo. Sigue existiendo el riesgo de doble conversión documentado abajo
+(depende de que el modelo de IA no pre-convierta la hora), que es un
+problema distinto y sigue abierto.
 
 El organizador es quien le habla al agente (`env.user`, sin `sudo()`) --
 si el candidato tiene un `partner_id` (contacto) ya vinculado, se agrega
@@ -26,16 +39,20 @@ offset esperado). Causa: el catálogo no le dice al modelo de IA en qué
 convención debe entregar `fecha_hora` (ver `input_schema.fecha_hora` en
 el catálogo, sin `description`) -- esta vez el agente parece haber
 convertido "15:00 Lima" a UTC (20:00) POR SU CUENTA antes de llamar la
-herramienta, y el código sumó +5h otra vez sobre ese valor ya convertido,
-duplicando el corrimiento. En la prueba de `agendar_reunion.py` (misma
-lógica de +5h) el agente NO había pre-convertido y el resultado fue
-correcto -- el comportamiento del modelo no es consistente entre
-llamadas. Corregido el dato de esta prueba a mano. Arreglar esto de raíz
-requiere agregar una `description` explícita al campo `fecha_hora` en el
-catálogo (fuera de este repo, ver `server_actions/README.md` sobre esa
-dependencia cross-repo) indicando "hora LOCAL de Lima, no conviertas a
-UTC" -- documentado como pendiente, no inventado un arreglo a medias
-acá.
+herramienta, y el código sumó el offset otra vez sobre ese valor ya
+convertido, duplicando el corrimiento. En la prueba de
+`agendar_reunion.py` (misma lógica) el agente NO había pre-convertido y
+el resultado fue correcto -- el comportamiento del modelo no es
+consistente entre llamadas. Corregido el dato de esta prueba a mano.
+Arreglar esto de raíz requiere agregar una `description` explícita al
+campo `fecha_hora` en el catálogo (fuera de este repo, ver
+`server_actions/README.md` sobre esa dependencia cross-repo) indicando
+"hora LOCAL del usuario, no conviertas a UTC" -- documentado como
+pendiente, no inventado un arreglo a medias acá. Esto es un problema
+DISTINTO al del offset hardcodeado a Perú (ya corregido arriba): ese era
+"¿qué país asume el código?", este es "¿el modelo respeta la convención
+del campo?" -- ambos reales, ambos documentados, solo el primero
+resuelto en esta sesión.
 """
 
 from guarda_llave import GUARDA_TEMPLATE
@@ -72,8 +89,16 @@ else:
     if not candidato.exists():
         ai['result'] = {'ok': False, 'mensaje': 'No encontre ningun candidato con id ' + str(candidato_id) + '.', 'datos': {}}
     else:
-        # hora local Lima -> UTC (Peru es UTC-5 fijo, ver README).
-        fecha_utc = fecha_dt + datetime.timedelta(hours=5)
+        # hora local del usuario -> UTC, usando el offset REAL de quien
+        # ejecuta la herramienta (env.user.tz_offset, ej. '-0500') en vez
+        # de asumir un pais fijo -- ver correccion de diseno en el
+        # docstring. tz_offset es 'char', formato '+HHMM'/'-HHMM'.
+        offset_txt = (env.user.tz_offset or '+0000').strip()
+        signo_offset = -1 if offset_txt[:1] == '-' else 1
+        horas_offset = int(offset_txt[1:3]) if len(offset_txt) >= 3 else 0
+        minutos_offset = int(offset_txt[3:5]) if len(offset_txt) >= 5 else 0
+        offset_delta = signo_offset * datetime.timedelta(hours=horas_offset, minutes=minutos_offset)
+        fecha_utc = fecha_dt - offset_delta
         modelo_applicant = env['ir.model'].search([('model', '=', 'hr.applicant')], limit=1)
 
         valores = {
@@ -98,7 +123,7 @@ else:
 
         ai['result'] = {
             'ok': True,
-            'mensaje': 'Entrevista agendada para el ' + str(fecha_dt) + ' hora Lima (' + modo_txt + ', ' + str(duracion_val) + ' min).' + aviso_contacto,
+            'mensaje': 'Entrevista agendada para el ' + str(fecha_dt) + ' hora local (' + modo_txt + ', ' + str(duracion_val) + ' min).' + aviso_contacto,
             'datos': {'evento_id': evento.id, 'candidato_id': candidato.id},
         }
 '''
