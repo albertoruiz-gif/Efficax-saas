@@ -75,7 +75,7 @@ grid de apps:
 **Fases 2-5: no construidas todavía.** El agente lo sabe y lo dice
 explícitamente si el dueño pregunta — no promete continuar solo.
 
-## Ícono de la app (16-ago-2026, iterado dos veces)
+## Ícono de la app (16-ago-2026, iterado tres veces)
 
 Se reemplazó el ícono genérico inicial (fa-rocket morado, placeholder) por
 uno propio, en el naranja `#FF6A00` y negro `#050505` exactos de
@@ -102,21 +102,37 @@ simple lista de viñetas, no como letra). Conclusión: ese sistema de
 letras se diseñó para deletrear EFFICAX específicamente, no es un
 alfabeto completo — no da para una B legible sin forzarlo demasiado.
 
-**Versión actual:** letra "B" geométrica real, tipografía Montserrat
-Black (peso grueso, redondeada, misma familia visual que Inter/Manrope —
-las que pide el brand book para UI digital, pero no están instaladas en
-esta máquina; Montserrat es el sustituto más cercano disponible),
-naranja sobre negro. Prioriza que se lea claro como "B" por sobre imitar
-la construcción exacta del logotipo.
+**Intento 3 (descartado, pero por decisión, no por fallo de ejecución):**
+letra "B" geométrica real, tipografía Montserrat Black, naranja sobre
+negro. Se leía bien como "B" — reemplazado igual porque Alberto proveyó
+un ícono propio real (ver versión actual).
 
-Fuente: `booster/assets/icono_booster_b.png` (generado con Pillow, no a
-mano en un editor — reproducible). Instalado vía `web_icon_data` en
-`ir.ui.menu` (campo binario para ícono custom, no el `web_icon` de texto
-que solo acepta el formato `fa-icono,#fondo,#icono`). **Detalle no
-documentado por Odoo, verificado en vivo:** si `web_icon_data` y
-`web_icon` se escriben en la misma llamada `write()`, Odoo vacía
-`web_icon_data` — hay que escribirlos en llamadas separadas (así quedó en
-`instalar_booster_fase1.py`).
+**Versión actual (17-ago-2026):** el mismo sistema modular de
+barras/puntos del logo de Efficax, pero esta vez un archivo SVG real
+provisto por Alberto (`efficax_letter_b_dynamic_speed.svg`, guardado en
+`booster/assets/` como referencia/provenance) — no una reconstrucción a
+ojo como los intentos 1 y 2. Reconstruido con Pillow como tile de app
+(fondo oscuro `#0D0D0D`, glifo naranja `#FF5500` con resplandor suave) y
+un **borde naranja `#FF6A00`** alrededor del tile — pedido explícito de
+Alberto para que Booster se distinga a simple vista de Efficax en la
+pantalla de un celular, donde ambos van a convivir. Las coordenadas del
+glifo (paths/rects/circles) son una copia exacta del SVG, no
+reinterpretadas a mano — no se pudo rasterizar el SVG directamente
+porque este entorno no tiene la librería nativa `libcairo` que
+`cairosvg` necesita, así que se reconstruyó el mismo dibujo con
+primitivas de Pillow (curvas Bézier muestreadas a mano para los trazos
+gruesos redondeados).
+
+Fuente: `booster/assets/generar_icono.py` (genera
+`booster/assets/icono_booster_b.png` desde cero, reproducible — no
+editado a mano en un editor de imágenes) + `booster/assets/efficax_letter_b_dynamic_speed.svg`
+(el SVG original, guardado como referencia). Instalado vía
+`web_icon_data` en `ir.ui.menu` (campo binario para ícono custom, no el
+`web_icon` de texto que solo acepta el formato `fa-icono,#fondo,#icono`).
+**Detalle no documentado por Odoo, verificado en vivo:** si
+`web_icon_data` y `web_icon` se escriben en la misma llamada `write()`,
+Odoo vacía `web_icon_data` — hay que escribirlos en llamadas separadas
+(así quedó en `instalar_booster_fase1.py`).
 
 ## Bug real encontrado y corregido (16-ago-2026)
 
