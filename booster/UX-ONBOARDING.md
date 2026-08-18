@@ -1,133 +1,205 @@
 # UX de onboarding — cómo llega un cliente real a Booster
 
 Vacío detectado el 17-ago-2026 (Alberto, viendo la lista técnica de
-`x_booster_implementacion` en el backend de Odoo): **no existe todavía un
-diseño de cómo un cliente prospecto llega, interactúa y avanza con
-Booster.** Lo que sí existe (Fase 1, probada en vivo) asume que quien le
-habla a Booster YA tiene una sesión de Odoo abierta — cierto para mí
-probando, falso para un prospecto real que todavía no es cliente.
+`x_booster_implementacion` en el backend de Odoo): faltaba conectar
+"cómo llega un prospecto a Booster antes de tener Odoo" con lo que el
+spec de Booster (`EFFICAX_IA/Agentes_SAAS/agentes_v2/01-booster-implementador.md`,
+cross-repo) YA define en detalle para las fases 1-4. Esta v2 del
+documento corrige eso: lo que sigue está basado en ese spec, no
+inventado — donde algo no está resuelto ahí, se marca explícito como
+pendiente de decisión de Alberto.
 
-Este documento es el diseño propuesto. No cambia código — es la base
-para decidir qué construir en Fase 3 (Provisioning) y ajustar Fase 1/2.
+Este documento sigue siendo diseño, no código.
 
 ## Lo que el cliente NUNCA debe ver
 
 La lista/formulario de `x_booster_implementacion` en el backend de
-Odoo (Ajustes → Técnico, o el menú "Booster" tal cual se ve hoy) es una
-vista de depuración para Efficax, generada automáticamente por Odoo para
-cualquier modelo custom. No tiene diseño, muestra campos crudos
-(`x_respuestas_json` como texto plano), y **no debe estar en el camino
-de ningún cliente.** El menú "Booster" que aparece en el grid de apps
-hoy es correcto como acceso RÁPIDO para Efficax (QA), pero la interfaz
-real del cliente es, y debe seguir siendo, 100% conversacional — el
-chat del agente, nunca una lista de Odoo.
+Odoo es una vista de depuración para Efficax, generada automáticamente
+por Odoo para cualquier modelo custom — no tiene diseño, muestra campos
+crudos. **No debe estar en el camino de ningún cliente.** La interfaz
+real es 100% el chat de Booster.
 
-## El problema real: el huevo y la gallina
+## El problema del huevo y la gallina
 
-Fase 1 de Booster (Descubrimiento) ya funciona conversando por el chat
-de un agente de IA — pero ese chat vive DENTRO de una base de datos
-Odoo. Un prospecto que todavía no es cliente **no tiene ninguna base de
-datos Odoo todavía.** No existe manera de que "hable con Booster" antes
-de que exista un tenant donde Booster viva. Ese es el vacío que hay que
-cerrar.
+Fase 1 de Booster ya funciona conversando por chat — pero ese chat vive
+DENTRO de una base de datos Odoo. Un prospecto que todavía no es
+cliente no tiene ninguna base de datos Odoo todavía.
 
-## Propuesta: reusar el trial nativo de Odoo como punto de entrada
+**Propuesta (sin cambios respecto a v1):** reusar `saas_trial` (ya
+instalado en este mismo tenant, mismo mecanismo que lo creó) para que
+un clic en "Prueba Booster gratis" genere un tenant nuevo y vacío en
+minutos, sin tarjeta. Si el prospecto convierte en Fase 2, ES el mismo
+tenant el que sigue — nunca hay migración de "prueba" a "definitivo".
 
-Este mismo Odoo de Efficax (`efficaxba-online`) tiene instalado
-`saas_trial` (confirmado con `ir.module.module`, state='installed') --
-el mecanismo con el que Odoo Online genera bases de datos nuevas y
-vacías en minutos, sin tarjeta, cuando alguien pide "probar Odoo". Es
-exactamente el mecanismo que YA creó la base de datos que estamos
-usando. Reusarlo evita construir infraestructura de provisioning propia
-para algo que Odoo ya resuelve.
+**Corrección sobre v1 (punto de Alberto):** ese primer clic no debería
+activar SOLO el SaaS de Odoo — debería disparar la activación de los
+demás servicios que Booster va a necesitar desde el arranque, según el
+checklist YA documentado más abajo en este mismo README de Booster
+("Requisito de diseño: TODOS los accesos se piden UNA sola vez"). Cuáles
+de esos servicios pueden activarse en modo trial/sandbox en el momento
+del clic (vs. cuáles requieren datos reales del negocio y por lo tanto
+esperan a Fase 3) es una decisión pendiente, servicio por servicio — no
+se resuelve acá con una lista inventada.
 
-**Flujo propuesto:**
+## Los TRES caminos reales de Fase 1 (no dos) — ya definidos en el spec
+
+Alberto preguntó por "nuevos vs. antiguos, y un tercero". El spec de
+Booster ya distingue **tres** caminos, no dos, y el punto donde cada uno
+pide qué datos está definido:
+
+### A. Cliente nuevo — sin operación previa
+
+No hay saldos, catálogo ni clientes que migrar. Fase 1 es puramente
+cualitativa: país/moneda → régimen fiscal → industria/qué vende →
+usuarios y roles → ¿dominio/correo? → dolores top-3. Fase 3
+(post-checkout) provisiona un tenant limpio; el cliente crea sus
+primeros productos/clientes con ayuda de Booster **mientras opera**, no
+como una carga masiva previa.
+
+### B. Cliente que ya opera, pero SIN Odoo (Excel, otro sistema, papel)
+
+Misma Fase 1 cualitativa, más una pregunta de spec ya definida: **Fase
+2 — "Propuesta y datos"** entrega **plantillas** (productos, clientes,
+saldos de apertura, proveedores — campos base Odoo) y **valida antes de
+importar** (SKU duplicados, RUC malformados, asiento de apertura
+cuadrado), reportando errores en lenguaje simple. La importación real
+ocurre recién en **Fase 3**, después del checkout — nunca antes de que
+el cliente haya pagado.
+
+### C. Cliente que YA TIENE Odoo funcionando
+
+Camino distinto por completo — **Fase 1-bis**, ya especificada: se
+ejecuta sobre una copia **staging** (nunca producción directa: si está
+en versión vieja, primero upgrade vía upgrade.odoo.com). Booster
+recorre y registra "como quien inventaría una casa habitada": versión y
+hosting, módulos instalados, plan contable y localización fiscal
+existentes, usuarios/grupos, datos ya cargados, automatizaciones/IA
+previas. **Todo lo detectado queda etiquetado "preexistente — prohibido
+tocar".** Booster solo AGREGA lo que el cliente no tiene — si deja de
+pagar, se apagan únicamente las piezas agregadas, y el cliente sigue
+operando exactamente como antes de conocernos.
+
+**¿Es esto lo que Alberto quiso decir con "el paquete 3"?** No estoy
+seguro — puede ser este tercer camino (cliente con Odoo preexistente),
+o puede ser una referencia a un plan/paquete de PRECIO (Efficax vende
+"un paquete básico fijo + cargo recurrente por agente adicional", según
+el RFD — no encontré una definición de "Paquete 3" como tal en el spec
+cross-repo). **Pendiente de que Alberto confirme cuál de las dos cosas
+es** antes de documentar más sobre eso.
+
+## "¿Ya tiene Odoo?" es la pregunta bisagra
+
+Fase 1 ya incluye esta pregunta explícita ("¿ya tiene dominio/correo? →
+¿ya tiene Odoo? [si sí → Fase 1-bis]"). Falta agregar, en el mismo
+punto, una pregunta hermana para cerrar el camino B: **si NO tiene
+Odoo, ¿ya opera con datos reales en otro lado (Excel, otro sistema) que
+haya que migrar, o es un negocio nuevo?** Sin esa pregunta explícita, el
+flujo no sabe si ofrecer las plantillas de Fase 2 (camino B) o saltarlas
+(camino A). Esto es un ajuste chico y concreto a Fase 1, no una fase
+nueva.
+
+## Por qué el checkout va ANTES de tocar algo técnico (aclarando el punto que no quedó claro en v1)
+
+Ejemplo concreto, tomado literal del spec: Fase 2 (Propuesta y datos)
+solo arma el carrito, cobra en el checkout de Casa Efficax, y —cuando
+aplica (camino B)— entrega plantillas y las VALIDA. Nada de eso toca el
+Odoo real del cliente todavía. Recién en **Fase 3 (Provisioning)** pasa
+lo técnico de verdad: localización fiscal, plan contable, permisos por
+rol, **importación de los datos ya validados**, branding, método de
+pago, agentes creados, llave de licencia instalada — y Fase 3 arranca
+únicamente después de que Fase 2 cerró con el pago. La razón: ni
+Efficax hace trabajo técnico real (conectar bancos, migrar datos,
+crear usuarios con permisos) para un prospecto que todavía podría no
+convertir, ni el cliente entrega datos sensibles reales (saldos,
+cartera de clientes) antes de haber decidido pagar.
+
+## "Quiere ver que esté todo OK antes" — ya es la mejor práctica del spec (RF-20)
+
+Para los caminos B y C (clientes que ya operan), el spec ya define el
+protocolo, con nombre propio: **"Protocolo producción (RF-20 —
+clientes que ya operan)"**:
 
 ```
-1. DESCUBRIMIENTO (hoy: nada construido para esto)
-   Prospecto ve un CTA ("Prueba Booster gratis") en Casa Efficax
-   (marketing/checkout, fuera de este repo) o en cualquier canal de
-   adquisición (WhatsApp, redes, referido).
-        |
-        v
-   Click dispara el trial nativo de Odoo -> nace un tenant NUEVO y
-   VACÍO en un par de minutos (mismo mecanismo saas_trial). Este
-   tenant, si el prospecto convierte, ES el tenant real -- no hay
-   migración de datos de "prueba" a "definitivo" despues.
-        |
-        v
-   Primer login: el ÚNICO app visible es Booster (política ya
-   decidida: agentes/herramientas invisibles en tenants de cliente).
-   El chat de Booster se abre automáticamente (o es el único botón
-   posible en pantalla) -- cero fricción de "encontrar el ícono de IA".
-        |
-        v
-   Booster arranca Fase 1 (Descubrimiento) -- YA CONSTRUIDA Y
-   PROBADA: país, industria, qué vende, datos legales, régimen fiscal,
-   roles de usuarios, dolores del negocio. Guarda avance
-   incrementalmente (x_booster_implementacion, ya funciona -- el bug
-   de continuidad por x_dueno_email ya está resuelto).
-
-2. PROPUESTA / CHECKOUT (Fase 2 -- fuera de este repo, spec en
-   Casa Efficax)
-   En un punto natural (discovery "suficiente" -- criterio a definir
-   con el spec de Casa Efficax), Booster resume lo aprendido y deriva
-   al checkout: el prospecto ve QUÉ le conviene (agentes/plan) y paga
-   ANTES de que se instale nada técnico (regla ya acordada esta
-   sesión).
-
-3. PROVISIONING (Fase 3 -- no construida)
-   Post-pago, Booster sigue en el MISMO tenant (no hay tenant nuevo
-   que crear -- ya existe desde el paso 1) y retoma la conversación
-   con las respuestas de Fase 1 ya guardadas. Ahí es cuando pide,
-   en un solo checkpoint, TODOS los accesos que va a necesitar (ver
-   checklist ya documentado más abajo en este mismo README de
-   Booster) -- nunca antes.
-
-4. AJUSTES / SOPORTE CONTINUO (Fases 4-5)
-   El cliente sigue hablando con Booster para pedir agentes nuevos
-   (upgrade), ajustar KPIs, etc. -- mismo canal desde el día 1, sin
-   aprender una interfaz nueva.
+Ensayo en copia/staging SIEMPRE
+  -> aprobación del CLIENTE revisando SUS PROPIOS datos en staging
+  -> backup manual
+  -> ejecución en ventana de baja actividad
+  -> todo aditivo (nunca se sobreescribe/borra lo existente)
+  -> rollback disponible vía inventario
 ```
 
-## Por qué este orden y no otro
+Y Fase 3 completa cierra con un **smoke test automático** antes de
+darse por "implementada": el agente responde en Live Chat, el correo
+transaccional sale, el método de pago carga, la llave se renovó hoy —
+reporte verde/rojo al dueño y al tablero del Supervisor de
+Implementación. Nada se declara listo sin ese check. Esto responde
+directamente la pregunta de Alberto: el cliente que ya opera SÍ ve que
+todo está OK antes de que nada cambie de verdad — es política ya
+definida, solo faltaba conectarla con "cómo empieza el prospecto".
 
-- **Cero fricción de "cómo empiezo":** no hay que crear cuenta, elegir
-  plan, ni pagar ANTES de poder hablar con alguien (aunque sea una IA)
-  que entienda el negocio. Baja la barrera de entrada al mínimo posible
-  con lo que Odoo ya ofrece gratis.
-- **Un solo tenant, nunca dos:** evita el trabajo (y el riesgo de
-  bugs) de migrar datos de un tenant "de prueba" a uno "definitivo".
-  El trial ES el tenant real si convierten.
-- **Consistente con la política ya decidida:** agentes/herramientas
-  invisibles en tenants de cliente, solo Booster visible -- este flujo
-  no la contradice, la usa desde el primer segundo.
-- **No inventa infraestructura nueva:** usa `saas_trial`, que Odoo
-  Online ya opera y ya demostró funcionar (es como nació este mismo
-  tenant). No hay que construir ni mantener un sistema de
-  provisioning propio para esta parte.
+## Flujo completo (v2, corregido)
 
-## Lo que falta decidir (no técnico, de producto)
+```
+0. ENTRADA
+   Clic en "Prueba Booster gratis" -> activa el SaaS de Odoo (saas_trial)
+   Y los demás servicios del checklist que apliquen en modo trial
+   (detalle pendiente, servicio por servicio).
+        |
+        v
+1. FASE 1 -- Descubrimiento (cualitativa, ya construida)
+   país/moneda -> régimen fiscal -> industria/qué vende -> usuarios y
+   roles -> ¿dominio/correo? -> ¿ya tiene Odoo?
+        |                                  |
+        | NO                               | SI
+        v                                  v
+   ¿ya opera con datos reales    FASE 1-bis (staging, checklist de
+   en otro lado?                 deteccion, "preexistente - prohibido
+      |         |                tocar", Booster solo agrega)
+      | NO      | SI                       |
+      v         v                          |
+   [camino A] [camino B: se anota          |
+              "requiere plantillas          |
+              de datos" para Fase 2]        |
+      |         |                          |
+      +---------+--------------------------+
+        |
+        v
+2. FASE 2 -- Propuesta y datos
+   Carrito (básico + sugeridos) -> checkout en Casa Efficax (AQUÍ se
+   paga). Si camino B: entrega plantillas (productos/clientes/saldos
+   apertura/proveedores) y valida antes de importar.
+        |
+        v
+3. FASE 3 -- Provisioning (solo después del pago)
+   Localización fiscal, plan contable, permisos por rol, importación de
+   datos YA validados (camino B) o inventario "preexistente" respetado
+   (camino C), branding, método de pago, agentes creados, llave
+   instalada. Para B/C: protocolo RF-20 (staging -> aprobación del
+   cliente -> backup -> ventana de baja actividad -> rollback
+   disponible). Cierra con smoke test verde/rojo -- nada se da por
+   implementado sin eso.
+        |
+        v
+4. FASE 4 -- Ajustes por agente + expediente del negocio
+   (ya especificado en el spec, sin cambios de este documento)
+```
 
-1. **¿El chat se abre automáticamente al primer login, o el cliente
-   tiene que hacer un primer click?** Auto-abrir reduce fricción pero
-   puede sentirse invasivo; un botón único y obvio ("Habla con
-   Booster") es más predecible. Recomendación: auto-abrir con un
-   mensaje de bienvenida corto, no un formulario -- se siente a
-   conversación, no a wizard.
-2. **¿Qué pasa si el prospecto abandona a mitad de Fase 1?** Hoy no
-   hay ningún recordatorio ni seguimiento -- el registro
-   `x_booster_implementacion` queda ahí, sin que nadie lo note. Un
-   `ir.cron` simple (mismo patrón ya usado en `dashboard_kpis/alerta_umbral.py`)
-   podría avisar a Efficax ("prospecto sin actividad 48h en Fase 1")
-   para que alguien retome manualmente -- no es urgente, pero es
-   barato de construir cuando se decida.
-3. **¿Cuál es el criterio de "discovery suficiente" para pasar a
-   Fase 2?** Hoy Booster no tiene ninguna regla de cuándo ofrecer el
-   checkout -- depende del spec de Casa Efficax, fuera de este repo.
+## Lo que sigue pendiente de decisión de Alberto
+
+1. **Confirmar qué es "el paquete 3"** — ¿el tercer camino (cliente con
+   Odoo preexistente) o un plan/precio específico no encontrado en el
+   spec cross-repo?
+2. Qué servicios del checklist de accesos pueden activarse en modo
+   trial/sandbox desde el clic inicial, y cuáles esperan a Fase 3.
+3. ¿El chat de Booster se auto-abre al primer login del trial, o
+   requiere un primer clic del prospecto?
+4. ¿Hay seguimiento a prospectos que abandonan a medio Fase 1 (hoy no
+   hay ningún recordatorio)?
+5. Criterio exacto de "discovery suficiente" para ofrecer el checkout
+   de Fase 2 — el spec no lo cuantifica.
 
 ## Qué NO cambia por este documento
 
-Este es un diseño, no una implementación. No se tocó código de
-Booster ni de Casa Efficax al escribirlo. Cuando se decida construir
-Fase 3, este documento es el punto de partida.
+Sigue siendo un documento de diseño/traducción del spec existente a un
+flujo de onboarding legible — no se tocó código de Booster ni de Casa
+Efficax al escribirlo.
