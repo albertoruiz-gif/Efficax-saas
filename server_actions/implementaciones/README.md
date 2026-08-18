@@ -44,10 +44,31 @@ no reproducirle esta misma fricción al cliente real).
 | rrhh | avanzar_etapa | 17-ago-2026, tenant 0 (etapa avanzada solo con verificación registrada, constancia dejada en el chatter del candidato vía `message_post`, + kill-switch) |
 | rrhh | file_contratacion | 17-ago-2026, tenant 0 (pieza archivada en expediente `Reclutamiento/<candidato>` recién creado, contenido verificado exacto, + kill-switch) |
 | rrhh | registrar_memo | 17-ago-2026, tenant 0 (memo archivado en la carpeta nativa `Employees - <compañía>/<empleado>/Memos`, estado `pendiente_acuse` + recordatorio a 7 días agendado, + kill-switch) |
+| finanzas_tributario | proyeccion_caja | 18-ago-2026, tenant 0 (cobros/pagos esperados a 90 días verificados exacto contra RPC directo: 98,021.10/22 facturas, 5,900.00/2 facturas, + kill-switch) |
+| inventarios | clasificar_abc | 18-ago-2026, tenant 0 (Pareto 80/15/5 verificado exacto contra RPC directo, escribe `x_clase_abc` real, + kill-switch) |
+| inventarios | generar_plan_conteo | 18-ago-2026, tenant 0 (fechas de conteo repartidas por id%frecuencia verificadas exactas, excluye correctamente productos sin clase ABC, + kill-switch) |
+| inventarios | entregar_conteo_dia | 18-ago-2026, tenant 0 (SKU del día correcto según el plan, conteo ciego por default, + kill-switch) |
+| inventarios | registrar_conteo | 18-ago-2026, tenant 0 (diferencia -5 verificada exacta vs `inventory_diff_quantity` nativo, SKU sin `default_code` reportado honesto como no encontrado en vez de adivinar, + kill-switch) |
+| inventarios | ajustar_inventario | 18-ago-2026, tenant 0 (`action_apply_inventory()` real confirmado — quant pasó de 430 a 425, movimiento de ajuste creado, constancia en el chatter, + kill-switch) |
+| inventarios | indicadores_confiabilidad | 18-ago-2026, tenant 0 (cobertura 18.0%/37 de 206, valor de ajustes S/47,316.85, ambos verificados exacto contra RPC directo; exactitud declarada explícitamente como no calculable todavía, + kill-switch) |
+| inventarios | alerta_quiebre_exceso | 18-ago-2026, tenant 0 (0 quiebres/0 excesos correctos — ambos SKU sin movimiento en los últimos 30 días, ventana de velocidad respetada, + kill-switch) |
 
 **Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 4 de 4 probadas.
 **rrhh: 8 de 9 probadas** (queda `publicar_linkedin`, `ejecuta: "servidor_control"` —
 ver más abajo, mismo caso que los 2 pendientes de Mentor).
+**inventarios completo: 7 de 7 probadas en vivo.**
+
+**Bug real y sistemático evitado en `inventarios` (18-ago-2026) —
+`product.product` vs `product.template`:** `stock.move`/`stock.quant`
+apuntan a `product.product` (variante), no a `product.template` (donde
+viven los campos custom `x_clase_abc`/`x_proximo_conteo_ciclico`,
+creados por `instalar_campos_inventarios.py` porque Odoo no tiene
+clasificación ABC nativa). Comparar esos ids directo habría fallado en
+silencio o tocado el producto equivocado — confirmado con `fields_get`
+antes de escribir el código, no descubierto después. Puenteado con
+`product_id.product_tmpl_id` en las 4 herramientas que lo necesitaban
+(`clasificar_abc`, `registrar_conteo`, `ajustar_inventario`,
+`indicadores_confiabilidad`, `alerta_quiebre_exceso`).
 
 **Bug real en `crear_puesto` (17-ago-2026) — nombres traducidos, no en
 inglés:** la primera versión buscaba `hr.contract.type` por nombre en
@@ -146,8 +167,7 @@ herramienta de este agente en la tabla de "código listo, pendiente".
 
 | Agente | Herramienta | Código listo | Pendiente |
 |---|---|---|---|
-| finanzas_tributario | proyeccion_caja | sí | **camino feliz confirmado en vivo** (18-ago-2026, cobros/pagos exactos contra RPC directo) — falta el kill-switch |
-| finanzas_tributario | aging_cobranzas | sí | prueba en vivo — instalada, bloqueada por una caída de OpenAI (`ReadTimeout` en `api.openai.com`, 18-ago-2026, 3 intentos consecutivos) |
+| finanzas_tributario | aging_cobranzas | sí | prueba en vivo — instalada, bloqueada por una caída de OpenAI (`ReadTimeout` en `api.openai.com`, 18-ago-2026, intermitente durante buena parte de la sesión) |
 | finanzas_tributario | redactar_gestion_cobranza | sí | prueba en vivo, misma caída |
 | finanzas_tributario | evaluar_credito | sí | prueba en vivo, misma caída |
 | finanzas_tributario | cierre_mensual | sí | prueba en vivo, misma caída |
@@ -183,9 +203,12 @@ Servidor de Control, no al sandbox del cliente) — su lógica de decisión
 pura vive en `servidor_control/app/rrhh/` y `servidor_control/app/finanzas_tributario/`
 respectivamente.
 
-Las otras 29 herramientas del catálogo (de 58 en total: 23 probadas en
-vivo + 9 con código listo pendiente de prueba + 4 con lógica pura de
-servidor_control ya testeada) siguen como esqueletos. Ya no hay
+Las otras 13 herramientas del catálogo (de 58 en total: 33 probadas en
+vivo + 8 con código listo pendiente de prueba + 4 con lógica pura de
+servidor_control ya testeada) siguen como esqueletos: las 4 de
+`legal_contratos` (en pausa por decisión de Alberto) más
+`marketing_crecimiento` (5) y `soporte_efficax` (4), los 2 agentes
+activos que faltan por implementar. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
 verificados de punta a punta. Lo que falta es escribir la lógica de negocio

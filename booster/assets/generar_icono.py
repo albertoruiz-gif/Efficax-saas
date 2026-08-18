@@ -93,7 +93,7 @@ def construir_icono():
     # Tile redondeado oscuro (mismo look que un icono de app real: fondo
     # solido, esquinas redondeadas, borde naranja para distinguirse).
     radio_tile = round(tam_render * 0.22)
-    grosor_borde = round(tam_render * 0.018)
+    grosor_borde = round(tam_render * 0.04)  # 18-ago-2026: mas ancho a pedido de Alberto (antes 0.018)
     tile = Image.new("RGBA", (tam_render, tam_render), (0, 0, 0, 0))
     draw_tile = ImageDraw.Draw(tile)
     draw_tile.rounded_rectangle(
