@@ -52,11 +52,21 @@ no reproducirle esta misma fricción al cliente real).
 | inventarios | ajustar_inventario | 18-ago-2026, tenant 0 (`action_apply_inventory()` real confirmado — quant pasó de 430 a 425, movimiento de ajuste creado, constancia en el chatter, + kill-switch) |
 | inventarios | indicadores_confiabilidad | 18-ago-2026, tenant 0 (cobertura 18.0%/37 de 206, valor de ajustes S/47,316.85, ambos verificados exacto contra RPC directo; exactitud declarada explícitamente como no calculable todavía, + kill-switch) |
 | inventarios | alerta_quiebre_exceso | 18-ago-2026, tenant 0 (0 quiebres/0 excesos correctos — ambos SKU sin movimiento en los últimos 30 días, ventana de velocidad respetada, + kill-switch) |
+| legal_contratos | registrar_contrato | 18-ago-2026, tenant 0 (contrato archivado en la carpeta nativa `Legal/Contracts` con los 6 campos custom verificados exactos contra RPC directo: contraparte, vigencia desde/hasta, renovación automática, aviso previo, semáforo, + kill-switch) |
+| legal_contratos | alerta_vencimiento | 18-ago-2026, tenant 0 (3 recordatorios agendados vía `activity_schedule` para el contrato registrado arriba, fechas 60/30/7 días antes de la vigencia verificadas exactas contra RPC directo: 2027-06-01, 2027-07-01, 2027-07-24, + kill-switch) |
 
 **Ventas & Atención 24/7 completa: 9 de 9.** Mentor: 4 de 6 probadas. dashboard_kpis: 4 de 4 probadas.
 **rrhh: 8 de 9 probadas** (queda `publicar_linkedin`, `ejecuta: "servidor_control"` —
 ver más abajo, mismo caso que los 2 pendientes de Mentor).
 **inventarios completo: 7 de 7 probadas en vivo.**
+**legal_contratos: 2 de 4 probadas en vivo** (`preparar_firma` tiene código
+validado — cada operación individual confirmada por RPC directo — pero
+bloqueado en el flujo de chat por un problema de la plataforma Odoo, no de
+este repo: ver el docstring de `legal_contratos/preparar_firma.py` para el
+detalle completo del traceback y el diagnóstico. `generar_contrato_base` es
+`ejecuta: "servidor_control"` y solo puede VALIDAR una solicitud hasta que
+Alberto entregue las plantillas reales de contrato validadas por abogado —
+ver `servidor_control/app/legal_contratos/generar_contrato_base.py`).
 
 **Bug real y sistemático evitado en `inventarios` (18-ago-2026) —
 `product.product` vs `product.template`:** `stock.move`/`stock.quant`
