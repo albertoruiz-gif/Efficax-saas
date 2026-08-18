@@ -144,6 +144,26 @@ Código listo, pendiente de prueba en vivo
 **dashboard_kpis completo: 4 de 4 probadas en vivo.** No queda ninguna
 herramienta de este agente en la tabla de "código listo, pendiente".
 
+| Agente | Herramienta | Código listo | Pendiente |
+|---|---|---|---|
+| finanzas_tributario | proyeccion_caja | sí | **camino feliz confirmado en vivo** (18-ago-2026, cobros/pagos exactos contra RPC directo) — falta el kill-switch |
+| finanzas_tributario | aging_cobranzas | sí | prueba en vivo — instalada, bloqueada por una caída de OpenAI (`ReadTimeout` en `api.openai.com`, 18-ago-2026, 3 intentos consecutivos) |
+| finanzas_tributario | redactar_gestion_cobranza | sí | prueba en vivo, misma caída |
+| finanzas_tributario | evaluar_credito | sí | prueba en vivo, misma caída |
+| finanzas_tributario | cierre_mensual | sí | prueba en vivo, misma caída |
+| finanzas_tributario | apartado_impuestos | sí | prueba en vivo, misma caída |
+| finanzas_tributario | configurar_recordatorios | sí | prueba en vivo, misma caída |
+| finanzas_tributario | importar_extracto | sí (incierto) | prueba en vivo **+ solo soporta CSV/texto plano, no Excel binario** (sin librería de parseo en el sandbox) y el mapeo de columnas por banco (BCP/BBVA/Interbank/Scotiabank) es un placeholder no verificado contra un extracto real — ver docstring |
+| finanzas_tributario | conciliar_movimientos | sí (incierto) | prueba en vivo **+ la API de reconciliación (`account.move.line.reconcile()`) no fue probada en vivo todavía** — degrada a propuesta si falla, no revienta, pero el camino de aplicación automática es el primer intento, no confirmado |
+
+Usa el playbook real `Playbook_Creditos_Cobranzas.md` (cross-repo, insumo
+del agente de Finanzas) para los tramos de cobranza (7 tramos Motorex),
+el scoring de crédito (5 criterios, 100 puntos) y la matriz de garantías
+— no son fórmulas inventadas. Los parámetros P1-P12 del playbook (que
+Booster configuraría por cliente en Fase 3 provisioning, que no ha
+corrido en este tenant) usan los "Default PYME" de la tabla como punto
+de partida, declarado explícito en cada respuesta.
+
 `calcular_kpi`/`revision_mensual` comparten un catálogo fijo de 5 KPIs
 (ventas_totales, ticket_promedio, tasa_conversion, margen_bruto,
 valor_inventario) — el "contrato de KPIs" real que Booster define en su
@@ -156,13 +176,15 @@ Action. Su lógica de decisión (validación + armado del payload, sin red)
 ya está en `servidor_control/app/mentor/` con tests propios — ver el
 README de `servidor_control/` para el detalle de qué falta para que sean
 invocables de verdad (integración XML-RPC + registro de tenants, ninguno
-existe todavía). Lo mismo aplica a `rrhh/publicar_linkedin` (misma razón:
-`aprobacion: "dueno"` + credenciales OAuth de LinkedIn por tenant, que
-tendría que guardar el Servidor de Control, no el sandbox del cliente) —
-su lógica de decisión pura vive en `servidor_control/app/rrhh/`.
+existe todavía). Lo mismo aplica a `rrhh/publicar_linkedin` y a
+`finanzas_tributario/preparar_sire` (misma razón: `aprobacion: "dueno"` +
+credenciales/formato específico por tenant que le corresponde al
+Servidor de Control, no al sandbox del cliente) — su lógica de decisión
+pura vive en `servidor_control/app/rrhh/` y `servidor_control/app/finanzas_tributario/`
+respectivamente.
 
-Las otras 38 herramientas del catálogo (de 58 en total: 23 probadas en
-vivo + 0 con código listo pendiente de prueba + 3 con lógica pura de
+Las otras 29 herramientas del catálogo (de 58 en total: 23 probadas en
+vivo + 9 con código listo pendiente de prueba + 4 con lógica pura de
 servidor_control ya testeada) siguen como esqueletos. Ya no hay
 incógnita de arquitectura: el patrón agente → tema → Server Action, la
 guarda de llave, el esquema saneado y el ciclo de aprobación están
