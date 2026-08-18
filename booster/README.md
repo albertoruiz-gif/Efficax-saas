@@ -157,6 +157,17 @@ telemetría y por el propio Booster. Esto todavía no está construido (no
 existe ningún tenant de cliente real todavía); queda para cuando se diseñe
 el mecanismo de provisioning de Fase 3.
 
+**Cómo llega el cliente hasta ahí — diseño propuesto (17-ago-2026):**
+ver `booster/UX-ONBOARDING.md`. Detectado como vacío real (Alberto vio la
+lista técnica de `x_booster_implementacion` en el backend de Odoo y
+preguntó cómo interactúa un cliente de verdad) — la interfaz real nunca
+es esa vista de Odoo, es 100% el chat de Booster. Propuesta: reusar el
+trial nativo de Odoo (`saas_trial`, ya instalado, mismo mecanismo que
+creó este tenant) como punto de entrada de Fase 1, para no construir
+infraestructura de provisioning propia solo para "cómo empieza el
+prospecto". Es un diseño, no código — pendiente de que Alberto lo
+confirme o ajuste antes de construir Fase 3.
+
 ## Modelo de negocio (acordado 16-ago-2026)
 
 El contrato/carrito se cierra en **Fase 2** (checkout en Casa Efficax, ya
