@@ -19,7 +19,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
 from generador import catalogo_path  # noqa: E402
-from guarda_llave import GUARDA_TEMPLATE  # noqa: E402
+from guarda_llave import BUILTINS_NO_DISPONIBLES, GUARDA_TEMPLATE  # noqa: E402
 
 IMPLEMENTACIONES_DIR = pathlib.Path(__file__).parent / "implementaciones"
 
@@ -93,3 +93,20 @@ def test_tool_sigue_en_el_catalogo(agente, nombre, modpath):
     assert nombre in nombres_catalogo, (
         f"{agente}/{nombre}: implementado pero ya no está en el catálogo (¿se renombró?)"
     )
+
+
+@pytest.mark.parametrize("agente,nombre,modpath", MODULOS, ids=IDS)
+def test_sin_builtins_no_disponibles(agente, nombre, modpath):
+    """`getattr`, `type`, etc. no existen en el sandbox de Odoo -- lanzan
+    NameError recien en vivo (getattr detectado el 19-ago-2026 en
+    booster/evaluar_implementacion; `type` ya estaba documentado en
+    guarda_llave.py pero ningun test lo hacia cumplir). Usar
+    `'campo' in rec._fields` + acceso directo en lugar de getattr."""
+    mod = importlib.import_module(modpath)
+    cuerpo = mod.CODIGO.replace(GUARDA_TEMPLATE, "", 1)
+    for builtin in BUILTINS_NO_DISPONIBLES:
+        for m in re.finditer(rf"(?<![\w.]){builtin}\(", cuerpo):
+            pytest.fail(
+                f"{agente}/{nombre}: usa '{builtin}(' que no existe en el sandbox de Odoo "
+                f"('...{cuerpo[max(0, m.start()-25):m.start()+30]}...')"
+            )

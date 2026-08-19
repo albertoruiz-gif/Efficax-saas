@@ -75,6 +75,53 @@ grid de apps:
 **Fases 2-5: no construidas todavía.** El agente lo sabe y lo dice
 explícitamente si el dueño pregunta — no promete continuar solo.
 
+## Norma de Implementación Odoo (19-ago-2026)
+
+Alberto aportó el manual "Implementación del Sistema Odoo — Localización
+Perú" (consultora Constanza Herrera, v1.0) con la instrucción de
+complementarlo y adoptarlo como norma: Booster debe poder **seguir un
+procedimiento** de implementación y **evaluar los vacíos** de un Odoo ya
+andando. Quedó así:
+
+- **`NORMA-IMPLEMENTACION.md`** — la norma en 6 fases (Fundaciones →
+  Datos maestros → Flujos operativos → Verificación → Go-live →
+  Post-implementación). Cada ítem marcado `[M]` (del manual) o `[+]`
+  (complemento de Efficax), y `✓auto` si la herramienta lo verifica sola.
+  Los vacíos del manual que se complementaron: migración de datos
+  iniciales (el más grande), inventario más allá de la guía de remisión,
+  fases de verificación/go-live/post estructuradas, y el principio de
+  accesos-de-una-sola-vez. Los vacíos que la norma NO cubre se declaran
+  al final (RRHH, marketing, web, otras localizaciones).
+- **`implementaciones/evaluar_implementacion.py`** — Server Action
+  `booster: evaluar_implementacion` (id 1566): corre los 18 checks
+  `✓auto` contra el Odoo real y devuelve veredicto + hallazgos por
+  prioridad (bloqueante / importante / recomendado) + puntos "a
+  conversar" con el dueño. Todos los modelos/campos verificados en vivo
+  con `fields_get` antes de escribirla.
+- **Topic "Booster — Norma de implementación"** (id 18) — agregado al
+  agente con `(4, id)`, NO `(6, 0, ...)`: el instalador de Fase 1 usa
+  (6,0) y habría borrado el topic de Fase 1. Instalador:
+  `instalar_norma_implementacion.py`.
+
+**Doble prueba en vivo (19-ago-2026):**
+- Vigente, por chat: Booster corrió la herramienta y encontró un vacío
+  real del tenant que nadie sabía — **194 de 198 productos sin código
+  UNSPSC** (exigencia SUNAT), 7 sin impuesto, 3 de 6 clientes sin
+  documento. Números cruzados contra RPC directo: exactos. Presentó el
+  resultado en lenguaje de negocio, hizo la pregunta "a conversar"
+  (saldos iniciales) en vez de asumirla, y balanceó con los 15 checks OK
+  — tal como le instruye el topic. (Corrió sobre Gemini: OpenAI estaba
+  caído esa mañana — la contingencia de proveedor sirvió en un caso real,
+  no simulado.)
+- Vencida: la guarda cortó con "Servicio suspendido" sin evaluar nada.
+
+**Bug real encontrado en la prueba:** `getattr` no existe en el sandbox
+de Odoo (NameError en vivo). Corregido con `'campo' in rec._fields` +
+acceso directo, agregado a `BUILTINS_NO_DISPONIBLES` en `guarda_llave.py`,
+y ahora hay un test (`test_sin_builtins_no_disponibles`) en las dos
+suites (catálogo y Booster) que lo hace cumplir — antes la lista existía
+pero nada la verificaba. Las 58 herramientas del catálogo pasan.
+
 ## Ícono de la app (16-ago-2026, iterado tres veces)
 
 Se reemplazó el ícono genérico inicial (fa-rocket morado, placeholder) por

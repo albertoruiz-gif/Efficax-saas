@@ -17,8 +17,10 @@ habrían fallado en su primera línea.
 
 # Builtins que el sandbox de Odoo (safe_eval) NO expone y que por lo tanto
 # no se pueden usar en el `code` de una Server Action. Verificado a mano:
-# `type` lanza NameError. Ante la duda, probar antes de asumir.
-BUILTINS_NO_DISPONIBLES = ("type", "open", "__import__", "eval", "exec", "compile")
+# `type` lanza NameError; `getattr` tambien (19-ago-2026, en
+# booster/evaluar_implementacion -- usar `'campo' in rec._fields` y acceso
+# directo en su lugar). Ante la duda, probar antes de asumir.
+BUILTINS_NO_DISPONIBLES = ("type", "getattr", "setattr", "hasattr", "open", "__import__", "eval", "exec", "compile")
 
 GUARDA_TEMPLATE = '''# GUARDA BOOSTER — no remover (incumplimiento de contrato)
 lic = env['x_booster_licencia'].sudo().search([], limit=1)

@@ -12,7 +12,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "server_actions"))
 
-from guarda_llave import GUARDA_TEMPLATE  # noqa: E402
+from guarda_llave import BUILTINS_NO_DISPONIBLES, GUARDA_TEMPLATE  # noqa: E402
 
 IMPLEMENTACIONES_DIR = pathlib.Path(__file__).parent / "implementaciones"
 
@@ -64,3 +64,19 @@ def test_sin_clases_de_excepcion_no_disponibles(nombre, modpath):
         assert f"except {clase}" not in mod.CODIGO, (
             f"{nombre}: 'except {clase}' no funciona en el sandbox de Odoo -- usar 'except:' desnudo"
         )
+
+
+@pytest.mark.parametrize("nombre,modpath", MODULOS, ids=IDS)
+def test_sin_builtins_no_disponibles(nombre, modpath):
+    """`getattr`, `type`, etc. no existen en el sandbox de Odoo -- lanzan
+    NameError recien en vivo. Descubierto con getattr en
+    evaluar_implementacion el 19-ago-2026; este test lo vuelve un error de
+    suite en vez de un hallazgo de prueba en vivo."""
+    mod = importlib.import_module(modpath)
+    cuerpo = mod.CODIGO.replace(GUARDA_TEMPLATE, "", 1)
+    for builtin in BUILTINS_NO_DISPONIBLES:
+        for m in re.finditer(rf"(?<![\w.]){builtin}\(", cuerpo):
+            pytest.fail(
+                f"{nombre}: usa '{builtin}(' que no existe en el sandbox de Odoo "
+                f"('...{cuerpo[max(0, m.start()-25):m.start()+30]}...')"
+            )
