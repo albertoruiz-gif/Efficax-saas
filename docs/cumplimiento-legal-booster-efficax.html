@@ -1,0 +1,459 @@
+<title>Checklist Legal Efficax</title>
+<style>
+:root{
+  --bg:#faf9f6;
+  --surface:#ffffff;
+  --surface-2:#f2f0ea;
+  --ink:#211e1a;
+  --ink-muted:#6b665c;
+  --accent:#d9480f;
+  --accent-soft:#ffede0;
+  --accent-strong:#b5390a;
+  --rule:#e7e4dc;
+  --red:#b42318; --red-bg:#fdece9;
+  --amber:#8a6d1b; --amber-bg:#fbf3d9;
+  --green:#15803d; --green-bg:#e7f6ec;
+  --shadow: 0 1px 2px rgba(33,30,26,0.06), 0 8px 24px -12px rgba(33,30,26,0.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#18160f;
+    --surface:#221e15;
+    --surface-2:#2a2519;
+    --ink:#efeae0;
+    --ink-muted:#a79e8c;
+    --accent:#ff7a33;
+    --accent-soft:#3a2415;
+    --accent-strong:#ffb37a;
+    --rule:#3a3527;
+    --red:#f2685c; --red-bg:#3a1613;
+    --amber:#e8b84b; --amber-bg:#3a2c0c;
+    --green:#4ade80; --green-bg:#12301f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#18160f;
+  --surface:#221e15;
+  --surface-2:#2a2519;
+  --ink:#efeae0;
+  --ink-muted:#a79e8c;
+  --accent:#ff7a33;
+  --accent-soft:#3a2415;
+  --accent-strong:#ffb37a;
+  --rule:#3a3527;
+  --red:#f2685c; --red-bg:#3a1613;
+  --amber:#e8b84b; --amber-bg:#3a2c0c;
+  --green:#4ade80; --green-bg:#12301f;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.sans{ font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif; }
+.mono{ font-family: ui-monospace,'SF Mono',Consolas,'Courier New',monospace; }
+
+.wrap{ max-width:760px; margin:0 auto; padding:48px 24px 96px; }
+
+header.doc{
+  border-bottom:1px solid var(--rule);
+  padding-bottom:28px;
+  margin-bottom:28px;
+}
+.eyebrow{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:12px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent-strong);
+  font-weight:600;
+  margin:0 0 10px;
+}
+h1{
+  font-size:clamp(28px,4vw,38px);
+  line-height:1.15;
+  margin:0 0 10px;
+  text-wrap:balance;
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+.subtitle{
+  color:var(--ink-muted);
+  font-size:16px;
+  margin:0;
+  max-width:60ch;
+}
+
+.disclaimer{
+  margin-top:22px;
+  background:var(--accent-soft);
+  border:1px solid var(--accent);
+  border-radius:6px;
+  padding:16px 18px;
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:14px;
+  line-height:1.55;
+  color:var(--ink);
+}
+.disclaimer strong{ color:var(--accent-strong); }
+
+.glance{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin:28px 0 8px;
+}
+.glance a{
+  text-decoration:none;
+  color:inherit;
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:8px;
+  padding:12px 12px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  box-shadow:var(--shadow);
+  transition:transform .15s ease, border-color .15s ease;
+}
+.glance a:hover{ transform:translateY(-2px); border-color:var(--accent); }
+.glance .n{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:11px; letter-spacing:.08em; color:var(--ink-muted); text-transform:uppercase;
+}
+.glance .t{ font-size:14px; font-weight:600; line-height:1.25; }
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  padding:4px 10px;
+  border-radius:999px;
+  width:fit-content;
+}
+.pill::before{ content:""; width:6px; height:6px; border-radius:50%; }
+.pill.falta{ background:var(--red-bg); color:var(--red); }
+.pill.falta::before{ background:var(--red); }
+.pill.incompleto{ background:var(--amber-bg); color:var(--amber); }
+.pill.incompleto::before{ background:var(--amber); }
+.pill.tengo{ background:var(--green-bg); color:var(--green); }
+.pill.tengo::before{ background:var(--green); }
+
+section.point{
+  margin-top:56px;
+  scroll-margin-top:24px;
+}
+.point-head{
+  display:flex;
+  align-items:baseline;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:6px;
+}
+.point-num{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  color:var(--ink-muted);
+  font-size:14px;
+  font-weight:700;
+}
+h2{
+  font-size:22px;
+  margin:0;
+  font-weight:700;
+  letter-spacing:-0.005em;
+}
+.point-head .pill{ margin-left:auto; }
+
+h3{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:12px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--ink-muted);
+  margin:26px 0 8px;
+  font-weight:700;
+}
+p{ margin:0 0 14px; }
+
+.callout{
+  background:var(--red-bg);
+  border-left:3px solid var(--red);
+  border-radius:4px;
+  padding:12px 16px;
+  font-size:15px;
+}
+.callout p:last-child{ margin-bottom:0; }
+
+.clause{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  border-radius:6px;
+  padding:18px 20px;
+  box-shadow:var(--shadow);
+  font-size:14.5px;
+  line-height:1.65;
+}
+.clause p{ margin:0 0 10px; }
+.clause p:last-child{ margin-bottom:0; }
+.clause .tag{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:10.5px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--accent-strong);
+  font-weight:700;
+  display:block;
+  margin-bottom:10px;
+}
+
+ul.links{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:13.5px;
+}
+ul.links a{ color:var(--accent-strong); text-decoration:none; border-bottom:1px solid transparent; }
+ul.links a:hover{ border-bottom-color:var(--accent-strong); }
+ul.links .desc{ color:var(--ink-muted); }
+
+hr.div{
+  border:none;
+  border-top:1px solid var(--rule);
+  margin:56px 0 40px;
+}
+
+.summary{
+  background:var(--surface-2);
+  border-radius:10px;
+  padding:28px 28px 8px;
+}
+.summary h2{ margin-bottom:16px; }
+.summary-block{ margin-bottom:22px; }
+.summary-block h3{ margin-top:0; }
+ol.priority{
+  margin:0;
+  padding-left:22px;
+}
+ol.priority li{ margin-bottom:10px; padding-left:2px; }
+ol.priority li b{ color:var(--accent-strong); }
+
+.two-layer{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin:16px 0;
+}
+.layer-card{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:8px;
+  padding:14px 16px;
+  font-size:13.5px;
+}
+.layer-card .k{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-muted);
+  display:block;
+  margin-bottom:6px;
+}
+
+footer.doc{
+  margin-top:64px;
+  padding-top:20px;
+  border-top:1px solid var(--rule);
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;
+  font-size:12.5px;
+  color:var(--ink-muted);
+}
+
+@media (max-width:600px){
+  .glance{ grid-template-columns:repeat(2,1fr); }
+  .two-layer{ grid-template-columns:1fr; }
+  .point-head .pill{ margin-left:0; }
+}
+</style>
+
+<div class="wrap">
+
+<header class="doc">
+  <p class="eyebrow">Efficax Solutions SA · Booster / Mentor / agentes IA</p>
+  <h1>Checklist de cumplimiento legal antes de escalar</h1>
+  <p class="subtitle">Evaluación de 4 puntos críticos para la app: declaración de IA, arbitraje, privacidad y contenido de usuario.</p>
+  <div class="disclaimer">
+    <strong>No soy abogado y esto no es asesoría legal.</strong> Es una guía de qué revisar y por qué, con texto borrador donde ayuda — todo lo que vaya a un contrato o política pública necesita el visto bueno de un abogado peruano antes de publicarse, exactamente con el mismo criterio que ya aplicamos en el código de <span class="mono">legal_contratos</span>: plantilla, no validez legal por sí sola.
+  </div>
+</header>
+
+<div class="glance">
+  <a href="#punto1"><span class="n">01</span><span class="t">Declaración de IA</span><span class="pill falta">Falta</span></a>
+  <a href="#punto2"><span class="n">02</span><span class="t">Arbitraje en ToS</span><span class="pill falta">Falta</span></a>
+  <a href="#punto3"><span class="n">03</span><span class="t">Privacidad y datos</span><span class="pill falta">Falta</span></a>
+  <a href="#punto4"><span class="n">04</span><span class="t">Contenido de usuario</span><span class="pill incompleto">Incompleto</span></a>
+</div>
+
+<section class="point" id="punto1">
+  <div class="point-head">
+    <span class="point-num">01</span>
+    <h2>Declaración de que usas IA</h2>
+    <span class="pill falta">Falta</span>
+  </div>
+
+  <h3>Riesgo concreto</h3>
+  <p>El estándar de la FTC en EE.UU. es simple: si un usuario razonablemente cree que habla con una persona y la empresa lo sabe, no aclararlo es una práctica engañosa. Varios estados (Utah, por ejemplo) ya exigen por ley avisar explícitamente cuando el usuario interactúa con IA generativa. Esto te afecta directo: Booster, Mentor y los 58 agentes hablan con clientes reales por chat sin ningún aviso de que es IA. Si un cliente reclama que "pensó que hablaba con una persona de Efficax", hoy no tienes cómo demostrar que se lo dijiste.</p>
+
+  <h3>Cómo lo soluciono</h3>
+  <p>Dos capas, no una: (1) un aviso visible la primera vez que se abre el chat de cada agente, y (2) una cláusula corta en los Términos de Servicio. Texto borrador para ambas:</p>
+
+  <div class="clause">
+    <span class="tag">Mensaje de apertura del chat</span>
+    <p>"Estás hablando con [nombre del agente], un asistente de inteligencia artificial de Efficax. Puede cometer errores — para temas urgentes o sensibles, pide hablar con una persona en cualquier momento."</p>
+  </div>
+
+  <div class="clause" style="margin-top:14px;">
+    <span class="tag">Cláusula en Términos de Servicio</span>
+    <p>"El Servicio utiliza agentes de inteligencia artificial para atender consultas, generar contenido y ejecutar acciones dentro de la plataforma. Las respuestas generadas por IA pueden contener errores y no constituyen asesoría profesional (legal, contable, financiera) salvo que se indique expresamente lo contrario. El Usuario puede solicitar en cualquier momento ser derivado a una persona."</p>
+  </div>
+
+  <h3>Links oficiales</h3>
+  <ul class="links">
+    <li><a href="https://www.ftc.gov/industry/technology/artificial-intelligence" target="_blank" rel="noopener">ftc.gov/industry/technology/artificial-intelligence</a> <span class="desc">— estándar de la FTC sobre prácticas engañosas con IA</span></li>
+  </ul>
+</section>
+
+<section class="point" id="punto2">
+  <div class="point-head">
+    <span class="point-num">02</span>
+    <h2>Cláusula de arbitraje en Términos de Servicio</h2>
+    <span class="pill falta">Falta</span>
+  </div>
+
+  <h3>Ojo con la confusión — son dos contratos distintos</h3>
+  <p>Esto NO es lo mismo que la cláusula de jurisdicción que ya diseñaste para <span class="mono">legal_contratos/generar_contrato_base.py</span> (conciliación extrajudicial antes de juzgado, para Perú). Esa es para los contratos que el software AYUDA A GENERAR entre tu cliente y SUS propios terceros (arrendatario, proveedor). Esta es distinta: el contrato entre Efficax y el cliente que COMPRA el software — hoy no existe ninguno de los dos formalmente, pero conviene no mezclarlos al escribirlos.</p>
+
+  <h3>Riesgo concreto</h3>
+  <p>Sin una cláusula de resolución de disputas y renuncia a acciones colectivas en tus propios Términos de Servicio, un cliente insatisfecho puede iniciar litigio directo en el fuero que le convenga, o —si alguna vez operas con clientes en jurisdicciones que lo permiten— sumarse a una demanda colectiva. Un arbitraje o conciliación administrada es más rápido, privado y muchísimo más barato que un juicio.</p>
+
+  <h3>Cómo lo soluciono</h3>
+  <p>Un borrador para Perú, usando la misma lógica que ya validaste para las plantillas de contrato (conciliación antes de instancia formal), pero aplicada al contrato Efficax↔cliente:</p>
+
+  <div class="clause">
+    <span class="tag">Cláusula de resolución de disputas — borrador Perú</span>
+    <p>"Toda controversia derivada del presente contrato, incluyendo su existencia, validez o terminación, se resolverá mediante arbitraje de derecho administrado por el Centro de Arbitraje de la Cámara de Comercio de Lima, conforme a su reglamento vigente. El arbitraje será en idioma español, con sede en Lima, Perú, y a cargo de un árbitro único. Las partes renuncian a iniciar o participar en acciones colectivas o consolidadas relacionadas con este contrato."</p>
+  </div>
+
+  <h3>Links oficiales</h3>
+  <ul class="links">
+    <li><a href="https://www.arbitrajeccl.com.pe/" target="_blank" rel="noopener">arbitrajeccl.com.pe</a> <span class="desc">— Centro de Arbitraje de la Cámara de Comercio de Lima, sitio oficial</span></li>
+  </ul>
+</section>
+
+<section class="point" id="punto3">
+  <div class="point-head">
+    <span class="point-num">03</span>
+    <h2>Privacidad y datos recolectados</h2>
+    <span class="pill falta">Falta</span>
+  </div>
+
+  <div class="callout">
+    <p><b>Primero, un reencuadre necesario:</b> me preguntaste por Privacy Labels de Apple/Google — esos SOLO aplican a apps distribuidas por App Store o Google Play. Dijiste que Booster se instala y se firma el contrato dentro de Odoo (compra/instalación directa, B2B) — bajo ese modelo, hoy NO aplican. Si algún día sacan una app nativa, se retoma este punto. Pero eso no te libra de nada: te falta lo que SÍ aplica ya.</p>
+  </div>
+
+  <h3>Riesgo concreto — dos frentes reales, no hipotéticos</h3>
+  <p><b>Meta ya te lo exige hoy.</b> Sus Platform Terms obligan a cualquier desarrollador que use su API (la automatización con Meta/redes sociales que mencionas) a mantener una política de privacidad pública y accesible, enlazada en la configuración de la app. Sin eso, Meta puede suspender el acceso a la API en cualquier momento — es un riesgo operativo inmediato, no solo legal.</p>
+  <p><b>La Ley N.° 29733 de Perú te aplica siempre</b> (recolectas datos de clientes peruanos, con o sin app store). La Autoridad Nacional de Protección de Datos Personales exige informar qué datos se recogen, para qué, y con quién se comparten (incluye compartir con Meta/redes sociales), además de permitir el ejercicio de derechos ARCO. Las multas van de 0.5 a 100 UIT — con la UIT 2026 en S/5,500, el techo supera medio millón de soles.</p>
+
+  <h3>Cómo lo soluciono</h3>
+  <p>Escribir una Política de Privacidad pública (no genérica) que cubra: qué datos procesa cada agente, base legal del tratamiento, que se comparten datos con Meta y otras redes vía la automatización (nombrarlas), cómo ejercer derechos ARCO, y contacto del responsable. Después, evaluar con el abogado si hace falta registrar el banco de datos ante la Autoridad — depende del volumen y tipo de datos que terminen procesando por tenant.</p>
+
+  <h3>Links oficiales</h3>
+  <ul class="links">
+    <li><a href="https://diariooficial.elperuano.pe/Normas/obtenerDocumento?idNorma=23" target="_blank" rel="noopener">diariooficial.elperuano.pe — Ley N.° 29733</a> <span class="desc">— texto oficial de la ley de protección de datos personales</span></li>
+    <li><a href="https://developers.meta.com/horizon/policy/privacy-policy/" target="_blank" rel="noopener">developers.meta.com — Privacy Policy Requirements</a> <span class="desc">— qué exige Meta a quien usa su API</span></li>
+  </ul>
+</section>
+
+<section class="point" id="punto4">
+  <div class="point-head">
+    <span class="point-num">04</span>
+    <h2>Contenido de usuario y agente DMCA</h2>
+    <span class="pill incompleto">Incompleto</span>
+  </div>
+
+  <h3>Tu caso es más simple de lo que parecía — pero no cero</h3>
+  <div class="two-layer">
+    <div class="layer-card">
+      <span class="k">Documentos de negocio</span>
+      Facturas, contratos, inventario que cada cliente sube sobre sí mismo. Riesgo bajo — no es contenido público de terceros como en una red social abierta.
+    </div>
+    <div class="layer-card">
+      <span class="k">Automatización con Meta/redes</span>
+      El sistema publica contenido en nombre del cliente hacia plataformas externas. Acá sí hay un vector real si ese contenido no es del cliente.
+    </div>
+  </div>
+
+  <h3>Riesgo concreto</h3>
+  <p>Si la automatización publica algo (imagen, texto, video) que el cliente no tenía derecho a usar, un tercero puede reclamarle a Efficax como intermediario técnico, no solo al cliente. Sin una cláusula que traslade la responsabilidad de autoría al usuario que sube el contenido, Efficax queda expuesta directamente.</p>
+
+  <h3>Cómo lo soluciono</h3>
+  <p>Cláusula de declaración y responsabilidad del usuario en los Términos de Servicio:</p>
+
+  <div class="clause">
+    <span class="tag">Cláusula de contenido de usuario — borrador</span>
+    <p>"El Usuario declara ser titular de los derechos, o contar con la licencia necesaria, sobre todo contenido (imágenes, texto, video, audio, documentos) que suba, publique o autorice publicar a través del Servicio, incluyendo publicaciones automatizadas hacia redes sociales de terceros. El Usuario es el único responsable frente a reclamos de terceros derivados de dicho contenido, y mantendrá indemne a Efficax frente a cualquier reclamo, sanción o gasto derivado de su incumplimiento de esta declaración. Efficax podrá retirar contenido reportado como infractor sin previo aviso."</p>
+  </div>
+
+  <p style="margin-top:18px;">Además, registrar un agente DMCA es barato (trámite en línea, se renueva cada 3 años) y da un respaldo legal real bajo ley de EE.UU. si algún día hay un reclamo de copyright sobre contenido que el sistema almacena o transmite — vale la pena hacerlo aunque el riesgo hoy sea bajo, precisamente porque el trámite es mínimo comparado con el colchón que da.</p>
+
+  <h3>Links oficiales</h3>
+  <ul class="links">
+    <li><a href="https://www.copyright.gov/dmca-directory/" target="_blank" rel="noopener">copyright.gov/dmca-directory</a> <span class="desc">— registro oficial de agente DMCA, U.S. Copyright Office</span></li>
+  </ul>
+</section>
+
+<hr class="div">
+
+<div class="summary">
+  <h2>Resumen</h2>
+
+  <div class="summary-block">
+    <h3>Lo que ya está bien</h3>
+    <p>El diseño de la cláusula de jurisdicción por país para las plantillas de contrato que el software genera (<span class="mono">legal_contratos</span>) ya sigue exactamente el criterio correcto: nunca fabricar texto legal sin validación de un abogado, disclaimer ineliminable, rechazo explícito si la jurisdicción no está validada. Ese mismo criterio es el que aplica a todo lo de esta página — es una base sólida, solo falta aplicarla al contrato Efficax↔cliente y a la política de privacidad.</p>
+  </div>
+
+  <div class="summary-block">
+    <h3>Antes de publicar o escalar, en este orden</h3>
+    <ol class="priority">
+      <li><b>Política de Privacidad pública.</b> Es lo más urgente — Meta ya la exige hoy para seguir usando su API, y la ley peruana la exige siempre.</li>
+      <li><b>Términos de Servicio</b> con las tres cláusulas de arriba (IA, arbitraje, contenido de usuario) revisados por un abogado peruano.</li>
+      <li><b>Registrar el agente DMCA.</b> Trámite corto, bajo costo, protección real.</li>
+      <li><b>Evaluar con el abogado</b> si corresponde registrar el banco de datos personales ante la Autoridad Nacional de Protección de Datos Personales, según el volumen real de datos que terminen procesando.</li>
+      <li><b>Retomar Privacy Labels de Apple/Google</b> solo si en algún momento sacan una app nativa distribuida por esas tiendas.</li>
+    </ol>
+  </div>
+</div>
+
+<footer class="doc">
+  Preparado como guía de trabajo, no como documento legal final. Todo texto marcado "borrador" necesita revisión de un abogado peruano antes de usarse en producción — 18-ago-2026.
+</footer>
+
+</div>
