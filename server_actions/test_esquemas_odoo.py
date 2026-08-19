@@ -132,3 +132,37 @@ def test_catalogo_completo_es_traducible():
                 )
                 if prop["type"] == "array":
                     assert prop["items"]["type"] != "object", f"{agente}.{t['name']}.{nombre}"
+
+
+def test_enum_de_strings_se_conserva():
+    """Un enum de strings pasa intacto: Odoo y Gemini lo aceptan."""
+    out = sanear_para_odoo({"properties": {"semaforo": {"type": "string", "enum": ["verde", "amarillo", "rojo"]}}})
+    assert out["properties"]["semaforo"]["enum"] == ["verde", "amarillo", "rojo"]
+
+
+def test_enum_numerico_se_traslada_a_la_descripcion():
+    """Un enum numérico rompe Gemini (exige TYPE_STRING): se elimina del
+    esquema y se traslada a la descripción, igual que las demás
+    restricciones no soportadas. Descubierto en la prueba de contingencia
+    de proveedor del 18-ago-2026."""
+    out = sanear_para_odoo({"properties": {"horizonte_dias": {"type": "integer", "enum": [30, 60, 90], "description": "Horizonte."}}})
+    prop = out["properties"]["horizonte_dias"]
+    assert "enum" not in prop
+    assert prop["type"] == "integer"
+    assert "30, 60, 90" in prop["description"]
+    assert prop["description"].startswith("Horizonte.")
+
+
+def test_catalogo_completo_es_compatible_con_gemini():
+    """Ninguna herramienta instalada puede llevar un enum no-string: con
+    uno solo, Gemini rechaza TODAS las herramientas del agente y este deja
+    de responder. Es la garantía de que el plan de contingencia
+    (conmutar OpenAI -> Gemini) funciona para el catálogo entero."""
+    data = json.loads(catalogo_path().read_text(encoding="utf-8"))
+    defs = data.get("$defs", {})
+    for agente, tools in data["herramientas"].items():
+        for t in tools:
+            out = sanear_para_odoo(t.get("input_schema", {}), defs)
+            for nombre, prop in out["properties"].items():
+                for v in prop.get("enum", []):
+                    assert isinstance(v, str), f"{agente}.{t['name']}.{nombre}: enum no-string {v!r}"

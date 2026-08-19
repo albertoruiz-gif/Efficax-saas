@@ -37,6 +37,16 @@ Rechazado (cada uno verificado uno por uno):
     se trasladan al texto de `description`, para que el modelo siga viendo
     la restricción aunque Odoo ya no la haga cumplir. La validación real es
     responsabilidad del cuerpo de la Server Action, no del esquema.
+  - `enum` con valores NO string (ej. `[30, 60, 90]` sobre un `integer`)
+    -> se ELIMINA del esquema y se traslada a la descripción. Odoo lo
+    acepta, pero **Gemini lo rechaza** (`Invalid value at ...enum[0]
+    (TYPE_STRING)`) -- Gemini exige que todo enum sea de strings. Se
+    descubrió el 18-ago-2026 al probar la conmutación de proveedor
+    (plan de contingencia OpenAI -> Gemini): con el enum numérico, el
+    agente entero deja de responder bajo Gemini. Un enum de strings sí
+    pasa intacto. La validación del valor sigue siendo del cuerpo de la
+    Server Action (que ya la hace: ver HORIZONTES_VALIDOS en
+    proyeccion_caja.py y la lista de plazos en evaluar_credito.py).
 """
 from __future__ import annotations
 
@@ -98,13 +108,24 @@ def _descripcion_con_restricciones(nodo: dict) -> str:
     return " ".join(partes).strip()
 
 
+def _enum_es_de_strings(valores: list) -> bool:
+    return all(isinstance(v, str) for v in valores)
+
+
 def _sanear_escalar(nodo: dict) -> dict:
     salida: dict[str, Any] = {"type": nodo.get("type", "string")}
     desc = _descripcion_con_restricciones(nodo)
+    if "enum" in nodo:
+        if _enum_es_de_strings(nodo["enum"]):
+            salida["enum"] = nodo["enum"]
+        else:
+            # Enum numérico: Gemini lo rechaza (exige TYPE_STRING). Se
+            # traslada a la descripción; el cuerpo de la Server Action
+            # valida el valor. Ver docstring del módulo.
+            valores = ", ".join(str(v) for v in nodo["enum"])
+            desc = (desc + f" (valores permitidos: {valores})").strip()
     if desc:
         salida["description"] = desc
-    if "enum" in nodo:
-        salida["enum"] = nodo["enum"]
     if "pattern" in nodo:
         salida["pattern"] = nodo["pattern"]
     return salida
