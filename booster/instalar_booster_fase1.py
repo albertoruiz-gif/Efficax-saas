@@ -35,7 +35,12 @@ CAMPOS_IMPLEMENTACION = [
     {"name": "x_tenant", "field_description": "Tenant", "ttype": "char"},
     {"name": "x_dueno_nombre", "field_description": "Nombre del dueno/admin", "ttype": "char"},
     {"name": "x_dueno_email", "field_description": "Email del dueno/admin", "ttype": "char"},
-    {"name": "x_fase_actual", "field_description": "Fase actual (descubrimiento/propuesta/provisioning/ajustes/residencia)", "ttype": "char"},
+    {"name": "x_fase_actual", "field_description": "Fase actual", "ttype": "selection",
+     "selection": "[('descubrimiento','1 Descubrimiento'),('propuesta','2 Propuesta y datos'),('provisioning','3 Provisioning'),('ajustes','4 Ajustes por agente'),('residencia','5 Residencia')]"},
+    # Camino del wizard (19-ago-2026): UN wizard que se bifurca, no 3 wizards. Se
+    # descubre en Fase 1 con dos preguntas bisagra (tiene Odoo? / ya opera con datos?).
+    {"name": "x_camino", "field_description": "Camino de implementacion", "ttype": "selection",
+     "selection": "[('A','A - Nuevo, sin operacion previa'),('B','B - Ya opera, sin Odoo (Excel/otro sistema)'),('C','C - Ya tiene Odoo')]"},
     {"name": "x_respuestas_json", "field_description": "Respuestas de la entrevista (JSON)", "ttype": "text"},
     {"name": "x_checkpoints", "field_description": "Checkpoints con fecha", "ttype": "text"},
     {"name": "x_pendientes", "field_description": "Pendientes", "ttype": "text"},
@@ -53,6 +58,7 @@ ESQUEMA_GUARDAR_AVANCE = {
         "respuestas_json": {"type": "string", "description": 'Texto JSON con las respuestas nuevas de la entrevista, ej: {"pais":"Peru","moneda":"PEN"}. Se combina con lo ya guardado, no lo reemplaza.'},
         "checkpoint_nota": {"type": "string", "description": "Nota corta opcional para el registro de checkpoints"},
         "pendiente": {"type": "string", "description": "Algo pendiente opcional para agregar a la lista de pendientes"},
+        "camino": {"type": "string", "enum": ["A", "B", "C"], "description": "Camino de implementacion, UNA VEZ que lo descubras en Fase 1 con las dos preguntas bisagra: A = negocio nuevo sin operacion previa; B = ya opera con datos reales pero SIN Odoo (Excel, otro sistema, papel); C = ya tiene Odoo funcionando. No lo adivines: si aun no lo sabes, no lo pases."},
     },
     "required": ["tenant", "dueno_nombre", "dueno_email", "fase", "respuestas_json"],
 }
@@ -62,8 +68,15 @@ TOPIC_INSTRUCCIONES = (
     "en conversacion natural y SIN jerga tecnica, estos datos del negocio: pais y moneda, "
     "regimen fiscal (en Peru: RUC, regimen, boleta/factura, OSE/PSE propio o guiado), "
     "industria y que vende, numero de usuarios y roles, si ya tiene dominio/correo propio, "
-    "si ya tiene Odoo (y en ese caso avisa que se necesita hacer el checklist de deteccion antes "
-    "de continuar, no lo intentes tu mismo todavia), y sus 3 dolores principales del negocio. "
+    "y LAS DOS PREGUNTAS BISAGRA que definen el camino: (1) si ya tiene Odoo funcionando "
+    "[si SI -> camino C: avisa que se hace un checklist de deteccion de lo existente antes de "
+    "continuar -- usa la herramienta evaluar_implementacion del tema Norma de implementacion, "
+    "y nada de lo que ya tiene se toca]; (2) si NO tiene Odoo, pregunta explicitamente si YA "
+    "OPERA con datos reales en otro lado (Excel, otro sistema, papel) o es un negocio nuevo "
+    "[si ya opera -> camino B: en Fase 2 le vas a entregar plantillas para migrar productos, "
+    "clientes, saldos; si es nuevo -> camino A: no hay nada que migrar, arranca limpio]. "
+    "Guarda el camino (A, B o C) con guardar_avance en cuanto lo tengas claro. "
+    "Y por ultimo sus 3 dolores principales del negocio. "
     "Guarda el avance con la herramienta de guardar avance despues de CADA respuesta relevante "
     "-- nunca esperes a tener todo para guardar, la conversacion se puede cortar. "
     'Al guardar, siempre pasa fase="descubrimiento". Solo conversas con el dueno o administrador '
@@ -86,9 +99,43 @@ SYSTEM_PROMPT = (
 )
 
 
+def _sincronizar_campos(o: Odoo, modelo_id: int) -> None:
+    """Idempotente POR CAMPO (19-ago-2026): crea los que faltan y migra el
+    tipo de los que cambiaron. Antes, si el modelo ya existia, el
+    instalador no tocaba campos -- asi que agregar x_camino o pasar
+    x_fase_actual de char a selection no llegaba nunca al tenant.
+
+    Migracion char -> selection preservando datos: Odoo no deja cambiar
+    ttype de un campo manual con registros. Se hace en 3 pasos: leer los
+    valores actuales, eliminar el campo viejo, crear el nuevo con el
+    mismo nombre, y reescribir los valores (que ya son claves validas del
+    selection porque guardar_avance siempre valido contra FASES_VALIDAS)."""
+    existentes = {
+        f["name"]: f
+        for f in o.execute("ir.model.fields", "search_read", [("model_id", "=", modelo_id)], fields=["name", "ttype"])
+    }
+    for campo in CAMPOS_IMPLEMENTACION:
+        actual = existentes.get(campo["name"])
+        if actual is None:
+            o.execute("ir.model.fields", "create", {**campo, "model_id": modelo_id, "state": "manual"})
+            print("  campo creado:", campo["name"], "(" + campo["ttype"] + ")")
+        elif actual["ttype"] != campo["ttype"]:
+            valores = {
+                r["id"]: r[campo["name"]]
+                for r in o.execute("x_booster_implementacion", "search_read", [], fields=[campo["name"]])
+            }
+            o.execute("ir.model.fields", "unlink", [actual["id"]])
+            o.execute("ir.model.fields", "create", {**campo, "model_id": modelo_id, "state": "manual"})
+            for rid, v in valores.items():
+                if v:
+                    o.execute("x_booster_implementacion", "write", [rid], {campo["name"]: v})
+            print("  campo migrado:", campo["name"], actual["ttype"], "->", campo["ttype"], "(" + str(len(valores)) + " registros preservados)")
+
+
 def crear_modelo_implementacion(o: Odoo) -> int:
     existente = o.execute("ir.model", "search", [("model", "=", "x_booster_implementacion")])
     if existente:
+        _sincronizar_campos(o, existente[0])
         return existente[0]
 
     modelo_id = o.execute("ir.model", "create", {
@@ -187,11 +234,19 @@ def crear_agente_booster(o: Odoo, tool_id: int) -> int:
         "llm_model": "gpt-5",
         "response_style": "balanced",
         "restrict_to_sources": True,
-        "topic_ids": [(6, 0, [topic_id])],
     }
     if agente_existente:
+        # (4, id) AGREGA el topic sin borrar los demas (ej. el de la Norma de
+        # implementacion, instalado por otro script). Antes era (6, 0, [...]),
+        # que reemplaza TODOS los topics -- reinstalar Fase 1 habria borrado
+        # la Norma. Tampoco se pisa el system_prompt: el aviso de IA y la regla
+        # de no enumerar agentes se agregaron en vivo el 18-ago-2026 y viven
+        # solo en el tenant; reescribirlo aqui los borraria.
+        valores_agente.pop("system_prompt", None)
+        valores_agente["topic_ids"] = [(4, topic_id)]
         o.execute("ai.agent", "write", agente_existente, valores_agente)
         return agente_existente[0]
+    valores_agente["topic_ids"] = [(6, 0, [topic_id])]
     return o.execute("ai.agent", "create", valores_agente)
 
 

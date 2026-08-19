@@ -41,6 +41,8 @@ fase_txt = (fase or '').strip()
 respuestas_txt = (respuestas_json or '').strip()
 checkpoint_txt = (checkpoint_nota or '').strip()
 pendiente_txt = (pendiente or '').strip()
+camino_txt = (camino or '').strip().upper()
+CAMINOS_VALIDOS = ('A', 'B', 'C')
 
 errores = []
 if not tenant_txt:
@@ -49,6 +51,8 @@ if not dueno_nombre_txt or not dueno_email_txt:
     errores.append('falta el nombre o email del dueno/administrador designado')
 if fase_txt not in FASES_VALIDAS:
     errores.append('fase invalida')
+if camino_txt and camino_txt not in CAMINOS_VALIDOS:
+    errores.append('camino debe ser A, B o C')
 
 respuestas_nuevas = {}
 if respuestas_txt:
@@ -108,6 +112,10 @@ else:
         'x_pendientes': pendientes_final,
         'x_fecha_ultimo_avance': ahora,
     }
+    # El camino se descubre UNA vez en Fase 1 y queda: solo se escribe si vino,
+    # nunca se pisa con vacio en llamadas posteriores.
+    if camino_txt:
+        valores['x_camino'] = camino_txt
 
     if registro:
         registro.write(valores)
