@@ -122,6 +122,51 @@ y ahora hay un test (`test_sin_builtins_no_disponibles`) en las dos
 suites (catálogo y Booster) que lo hace cumplir — antes la lista existía
 pero nada la verificaba. Las 58 herramientas del catálogo pasan.
 
+## Inventario y kill-switch capa 2 (19-ago-2026)
+
+Prerrequisito de la Fase 3 y del modelo de cobro. El spec exige que cada
+cosa que Booster crea quede registrada con etiqueta "creado por Booster"
+o "preexistente" -- sin eso, apagar a un cliente que deja de pagar es a
+ciegas. Construido y probado en vivo:
+
+- **Modelo `x_booster_inventario`**: una fila por registro (modelo, id,
+  nombre, etiqueta, receta de origen, fecha, estado, archivable).
+  `perm_unlink=False`: el inventario es auditoría, no se borra.
+- **`booster: registrar_en_inventario`** (id 1575): idempotente por
+  (modelo, res_id) -- reintentos de recetas no duplican. Calcula
+  `x_archivable` leyendo si el modelo tiene `active`. Rechaza ids
+  fantasma.
+- **`booster: killswitch_inventario`** (id 1576): `listar` (seguro) /
+  `apagar` / `reactivar`. Apaga SOLO lo `creado_por_booster`, filtrado
+  por etiqueta ANTES de cualquier write; lo `preexistente` ni se carga.
+  `apagar`/`reactivar` exigen `confirmar=true` explícito. Lo no
+  archivable se salta y se reporta, no se finge.
+- Topic "Booster — Inventario y kill-switch" (id 19), enlazado con
+  `(4, id)`. Instalador: `instalar_inventario.py`.
+
+**Prueba en vivo (19-ago-2026) -- la invariante central del modelo:**
+Mentor piloto inventariado como creado_por_booster, Hasky como
+preexistente. `apagar` sin confirmar → no hizo nada. `apagar` confirmado
+→ Mentor `active=False`, **Hasky intacto**. `listar` → estados
+correctos. `reactivar` → Mentor vuelve, Hasky intacto. Licencia vencida
+→ ni con `confirmar=true` ejecuta. Verificado todo por RPC directo sobre
+`ai.agent.active`, no por el mensaje. **"Lo nuestro se apagó; lo suyo
+jamás"** -- probado.
+
+**Dos hallazgos de harness que importan para futuras pruebas:** (1) un
+`raise UserError` al final de una Server Action hace ROLLBACK de toda
+la transacción -- el truco de "lanzar el resultado por excepción" que
+usé en `evaluar_implementacion` (solo lectura) NO sirve para herramientas
+que escriben; usar `log()` → `ir.logging`, que sobrevive al commit.
+(2) `ai_tool` con `use_in_ai` recibe params como Python: al inyectarlos
+a mano en una prueba hay que usar `repr()`, no `json.dumps()` (`false`
+no es Python).
+
+**Pendiente que esto habilita:** las recetas de Fase 3 deben llamar a
+`registrar_en_inventario` después de cada `create`; Fase 1-bis (camino
+C) debe registrar lo detectado como `preexistente`. Hoy el inventario
+tiene 2 filas reales: Mentor piloto (creado) y Hasky (preexistente).
+
 ## Ícono de la app (16-ago-2026, iterado tres veces)
 
 Se reemplazó el ícono genérico inicial (fa-rocket morado, placeholder) por
