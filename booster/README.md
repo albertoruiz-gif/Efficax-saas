@@ -33,6 +33,12 @@ accesos conocidos hasta ahora que deberían pedirse juntos ahí:
   (instructivos Pack 360, Fase 1).
 - Marketing (si el cliente activó ese agente): códigos de píxel de
   Meta/TikTok/LinkedIn (Fase 4).
+- Correo saliente de Mentor (`redactar_email`/`enviar_email`, diseño
+  21-ago-2026, ver `02-mentor-copiloto.md`): credenciales SMTP — Gmail
+  con contraseña de aplicación si el cliente no tiene dominio propio, o
+  su correo real si ya lo tiene. `ir.mail_server` está vacío en todo
+  tenant por defecto (verificado en Efficax) -- sin esto configurado,
+  Mentor puede redactar borradores pero no puede enviar nada.
 
 Ninguno de estos accesos existe todavía en el wizard porque la Fase 3 no
 está construida — este bloque queda como checklist obligatorio para esa
