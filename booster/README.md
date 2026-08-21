@@ -122,6 +122,41 @@ y ahora hay un test (`test_sin_builtins_no_disponibles`) en las dos
 suites (catálogo y Booster) que lo hace cumplir — antes la lista existía
 pero nada la verificaba. Las 58 herramientas del catálogo pasan.
 
+## Fuentes del agente Booster (21-ago-2026)
+
+Detectado en el inventario de Fase 1 (21-ago-2026): el agente Booster
+tiene `restrict_to_sources=True` desde su creacion pero `sources_ids=[]`
+-- cero documentos cargados. El spec (`01-booster-implementador.md`)
+pide "guias de implementacion Efficax, instructivos Pack 360, plantillas
+RF-10" como fuentes. Se buscaron los tres en el repo cross-repo de
+Efficax: **Pack 360 y las plantillas RF-10 no existen como archivos** --
+el spec los menciona pero nunca se escribieron. No se inventa su
+contenido (misma convencion del catalogo: no fabricar).
+
+**Primera version honesta, instalada (`instalar_fuentes_booster.py`):**
+solo los DOS documentos reales y ya verificados de este repo, subidos
+como `ai.agent.source` tipo `binary` (con `ir.attachment` real, no texto
+pegado ni URL):
+
+- `NORMA-IMPLEMENTACION.md`
+- `UX-ONBOARDING.md`
+
+Ambos quedaron `status='indexed'` y `sources_fully_processed=True` en el
+agente. Instalador idempotente por archivo: si la fuente ya existe para
+ese nombre, reemplaza el adjunto en vez de duplicar.
+
+**Pendiente:** Pack 360 y plantillas RF-10 -- requieren que Alberto los
+provea o confirme que se redacten desde cero.
+
+**Prueba en vivo (21-ago-2026):** se le pregunto a Booster algo que solo
+podia responder si de verdad leyo los documentos (no algo ya cubierto
+por su `system_prompt`): en que fase se instala `x_booster_licencia` y
+que verifica el smoke test. Respondio citando la fuente (`[1]`) con el
+contenido EXACTO de `UX-ONBOARDING.md` -- Fase 3 (Provisioning), los 4
+checks del smoke test (Live Chat responde, correo transaccional sale,
+metodo de pago carga, llave renovada hoy) y el reporte verde/rojo al
+Supervisor. Confirmado texto por texto via RPC, no solo por pantalla.
+
 ## Inventario y kill-switch capa 2 (19-ago-2026)
 
 Prerrequisito de la Fase 3 y del modelo de cobro. El spec exige que cada
