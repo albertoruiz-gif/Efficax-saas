@@ -166,6 +166,49 @@ checks del smoke test (Live Chat responde, correo transaccional sale,
 metodo de pago carga, llave renovada hoy) y el reporte verde/rojo al
 Supervisor. Confirmado texto por texto via RPC, no solo por pantalla.
 
+## Mapa dolores→agentes + autorizados en Fase 1 (21-ago-2026)
+
+Alberto preguntó "qué le falta a Booster" y señaló dos vacíos concretos
+de Fase 1, subsanados los dos:
+
+- **`x_agentes_sugeridos`** (campo nuevo, se reemplaza entero en cada
+  llamada): Fase 1 recolecta los 3 dolores del dueño pero no producía
+  ninguna salida con ellos — el carrito sugerido que debía alimentar la
+  Fase 2 se perdía. Se agregó `MAPA_DOLORES_AGENTES` al topic (7 dolores
+  reales → código de agente, contra el catálogo real de
+  `01`-`10-inventarios.md` — Mentor y Ventas & Atención 24/7 son Básico,
+  siempre incluidos; Soporte Postventa es interno, nunca se sugiere a un
+  cliente) y el parámetro `agentes_sugeridos` en `guardar_avance_wizard`.
+- **`x_autorizados`** (campo nuevo, se acumula como `pendientes` — una
+  persona por llamada): Booster ya sabía por el `system_prompt` que
+  podía hablar con quien el dueño autorizara, pero no había dónde
+  anotarlo. Se agregó la pregunta en el mismo punto que "usuarios y
+  roles" de Fase 1, y el parámetro `autorizado`.
+
+**Doble prueba en vivo (21-ago-2026):** un mensaje único con toda la
+info de Fase 1 (datos del negocio, camino A, una persona autorizada,
+3 dolores reales) verificado exacto via RPC contra
+`x_booster_implementacion`: `x_camino='A'`,
+`x_agentes_sugeridos='ventas, finanzas, inventarios'` (los 3 dolores
+mapearon exactamente a lo diseñado: "no respondo a tiempo"→ventas,
+"no sé si alcanza la caja"→finanzas, "mi stock nunca cuadra"→inventarios),
+`x_autorizados='Carlos Mendoza, carlos@efficaxba.com'`. No se repitió el
+kill-switch: el `GUARDA_TEMPLATE` no se tocó, ya está probado en este
+mismo tool.
+
+**Hallazgo real, no relacionado con el código (21-ago-2026):** un canal
+`ai_chat` puede quedar **trabado indefinidamente** sin responder a nada
+—ni siquiera "hola, estás ahí?"— y el problema sobrevive a un cambio de
+proveedor LLM (pasó con GPT-5 y siguió pasando con Gemini en el mismo
+canal), así que no es la contingencia de proveedor lo que lo resuelve.
+Pasó tras un mensaje duplicado por una desconexión de la extensión de
+Chrome a mitad de un envío. Se resolvió eliminando el canal
+(`discuss.channel.unlink`) y abriendo uno nuevo — Odoo lo recrea solo al
+volver a abrir el chat del agente. Vale la pena tenerlo presente para
+Fase 5 (Residencia): si un cliente reporta que su copiloto "dejó de
+responder", antes de asumir una caída de proveedor, revisar si el canal
+quedó trabado y basta con recrearlo.
+
 ## Inventario y kill-switch capa 2 (19-ago-2026)
 
 Prerrequisito de la Fase 3 y del modelo de cobro. El spec exige que cada

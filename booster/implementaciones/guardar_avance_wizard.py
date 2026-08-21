@@ -27,6 +27,18 @@ tool ya se escribió directamente en el formato que Odoo acepta.
 `respuestas_json` acumula: no reemplaza el diccionario completo en cada
 llamada, hace merge con lo que ya había — así Booster puede ir guardando
 una respuesta a la vez sin pisar las anteriores.
+
+**Agregado 21-ago-2026 (pedido de Alberto — "qué falta de la Fase 1"):**
+dos parámetros nuevos, cada uno con su propia semántica de guardado:
+- `agentes_sugeridos`: se REEMPLAZA entero en cada llamada (como `fase` o
+  `tenant`) — Booster manda siempre la lista completa vigente de códigos,
+  no un delta. Es la salida más importante de Fase 1 (el carrito
+  sugerido que alimenta la Fase 2, todavía sin construir) y antes no
+  quedaba registrada en ningún lado.
+- `autorizado`: se ACUMULA como `pendiente` — una persona por llamada,
+  nunca pisa lo ya guardado. Antes Booster sabía (por el system prompt)
+  que podía hablar con quien el dueño autorizara, pero no había dónde
+  anotar a quién.
 """
 
 from guarda_llave import GUARDA_TEMPLATE
@@ -43,6 +55,9 @@ checkpoint_txt = (checkpoint_nota or '').strip()
 pendiente_txt = (pendiente or '').strip()
 camino_txt = (camino or '').strip().upper()
 CAMINOS_VALIDOS = ('A', 'B', 'C')
+agentes_sugeridos_txt = (agentes_sugeridos or '').strip()
+autorizado_txt = (autorizado or '').strip()
+AGENTES_VALIDOS = ('ventas', 'marketing', 'finanzas', 'dashboard', 'legal', 'rrhh', 'inventarios')
 
 errores = []
 if not tenant_txt:
@@ -53,6 +68,13 @@ if fase_txt not in FASES_VALIDAS:
     errores.append('fase invalida')
 if camino_txt and camino_txt not in CAMINOS_VALIDOS:
     errores.append('camino debe ser A, B o C')
+
+agentes_lista = []
+if agentes_sugeridos_txt:
+    agentes_lista = [a.strip().lower() for a in agentes_sugeridos_txt.split(',') if a.strip()]
+    agentes_invalidos = [a for a in agentes_lista if a not in AGENTES_VALIDOS]
+    if agentes_invalidos:
+        errores.append('agentes_sugeridos tiene codigos invalidos: ' + ', '.join(agentes_invalidos) + '. Validos: ' + ', '.join(AGENTES_VALIDOS))
 
 respuestas_nuevas = {}
 if respuestas_txt:
@@ -87,10 +109,12 @@ else:
 
         checkpoints_prev = registro.x_checkpoints or ''
         pendientes_prev = registro.x_pendientes or ''
+        autorizados_prev = registro.x_autorizados or ''
     else:
         respuestas_final = respuestas_nuevas
         checkpoints_prev = ''
         pendientes_prev = ''
+        autorizados_prev = ''
 
     linea_checkpoint = str(ahora) + ' [' + fase_txt + ']'
     if checkpoint_txt:
@@ -101,6 +125,10 @@ else:
     if pendiente_txt:
         pendientes_final = (pendientes_prev + '\\n' + pendiente_txt) if pendientes_prev else pendiente_txt
 
+    autorizados_final = autorizados_prev
+    if autorizado_txt:
+        autorizados_final = (autorizados_prev + '\\n' + autorizado_txt) if autorizados_prev else autorizado_txt
+
     valores = {
         'x_name': tenant_txt,
         'x_tenant': tenant_txt,
@@ -110,12 +138,17 @@ else:
         'x_respuestas_json': json.dumps(respuestas_final, ensure_ascii=False),
         'x_checkpoints': checkpoints_final,
         'x_pendientes': pendientes_final,
+        'x_autorizados': autorizados_final,
         'x_fecha_ultimo_avance': ahora,
     }
     # El camino se descubre UNA vez en Fase 1 y queda: solo se escribe si vino,
     # nunca se pisa con vacio en llamadas posteriores.
     if camino_txt:
         valores['x_camino'] = camino_txt
+    # agentes_sugeridos SI se reemplaza entero (a diferencia de camino):
+    # Booster manda la lista completa vigente en cada llamada, no un delta.
+    if agentes_lista:
+        valores['x_agentes_sugeridos'] = ', '.join(agentes_lista)
 
     if registro:
         registro.write(valores)

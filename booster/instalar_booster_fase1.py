@@ -46,6 +46,12 @@ CAMPOS_IMPLEMENTACION = [
     {"name": "x_pendientes", "field_description": "Pendientes", "ttype": "text"},
     {"name": "x_fecha_inicio", "field_description": "Fecha de inicio", "ttype": "datetime"},
     {"name": "x_fecha_ultimo_avance", "field_description": "Fecha del ultimo avance", "ttype": "datetime"},
+    # 21-ago-2026, pedido de Alberto ("que falta de la Fase 1"): la salida
+    # mas importante de Fase 1 -- el carrito sugerido -- no quedaba
+    # registrada en ningun lado, y no habia donde anotar a quien mas
+    # autorizo el dueno a hablarle a Booster.
+    {"name": "x_agentes_sugeridos", "field_description": "Codigos de agentes sugeridos segun los dolores (lista separada por comas)", "ttype": "text"},
+    {"name": "x_autorizados", "field_description": "Personas que el dueno autorizo explicitamente a hablarle a Booster (una por linea)", "ttype": "text"},
 ]
 
 ESQUEMA_GUARDAR_AVANCE = {
@@ -59,15 +65,43 @@ ESQUEMA_GUARDAR_AVANCE = {
         "checkpoint_nota": {"type": "string", "description": "Nota corta opcional para el registro de checkpoints"},
         "pendiente": {"type": "string", "description": "Algo pendiente opcional para agregar a la lista de pendientes"},
         "camino": {"type": "string", "enum": ["A", "B", "C"], "description": "Camino de implementacion, UNA VEZ que lo descubras en Fase 1 con las dos preguntas bisagra: A = negocio nuevo sin operacion previa; B = ya opera con datos reales pero SIN Odoo (Excel, otro sistema, papel); C = ya tiene Odoo funcionando. No lo adivines: si aun no lo sabes, no lo pases."},
+        "agentes_sugeridos": {"type": "string", "description": "Lista completa y actual de codigos de agentes sugeridos segun los dolores del dueno, separados por coma (valores validos: ventas, marketing, finanzas, dashboard, legal, rrhh, inventarios). Cada llamada REEMPLAZA la lista anterior -- manda siempre la lista completa vigente, no solo lo nuevo. No mandes este parametro hasta haber escuchado los 3 dolores."},
+        "autorizado": {"type": "string", "description": "Nombre (y contacto si lo da) de UNA persona que el dueno autorizo explicitamente a hablarle a Booster ademas de si mismo. Se agrega a la lista existente, no la reemplaza -- pasa este parametro una vez por cada persona nueva que el dueno mencione."},
     },
     "required": ["tenant", "dueno_nombre", "dueno_email", "fase", "respuestas_json"],
 }
+
+MAPA_DOLORES_AGENTES = (
+    "MAPA DOLOR -> AGENTE (para sugerir el carrito, catalogo real de Efficax, no inventes otros "
+    "agentes): "
+    "'pierdo clientes porque no respondo a tiempo / no doy abasto atendiendo' -> ventas "
+    "(Ventas & Atencion 24/7 -- Basico, ya incluido siempre junto con Mentor, pero vale nombrarlo "
+    "porque resuelve justo ese dolor); "
+    "'no me llegan clientes nuevos / no se que publicar / mis redes estan abandonadas' -> marketing "
+    "(Marketing & Crecimiento); "
+    "'no se si me va a alcanzar la caja / no llevo control de cobranzas / los impuestos me generan "
+    "dolores de cabeza' -> finanzas (Finanzas & Tributario); "
+    "'no tengo visibilidad de como va mi negocio / no se que indicador mirar' -> dashboard "
+    "(Dashboard & KPIs); "
+    "'no tengo mis contratos en regla / me da miedo firmar algo mal' -> legal (Legal & Contratos); "
+    "'contratar bien me cuesta / no tengo un proceso de seleccion' -> rrhh (RRHH); "
+    "'mi stock nunca cuadra / no se cuanto tengo realmente' -> inventarios (Inventarios). "
+    "Mentor y Ventas & Atencion 24/7 son SIEMPRE parte del Basico, se incluyen sin importar los "
+    "dolores -- el carrito sugerido que importa para Fase 2 es sobre todo los Adicionales "
+    "(marketing, finanzas, dashboard, legal, rrhh, inventarios). No sugieras un agente que no "
+    "resuelve ninguno de los 3 dolores mencionados; si un dolor no calza claro con ninguno, dilo "
+    "explicito en vez de forzar una sugerencia."
+)
 
 TOPIC_INSTRUCCIONES = (
     "Estas en la Fase 1 (Descubrimiento) del wizard de implementacion. Objetivo: recolectar, "
     "en conversacion natural y SIN jerga tecnica, estos datos del negocio: pais y moneda, "
     "regimen fiscal (en Peru: RUC, regimen, boleta/factura, OSE/PSE propio o guiado), "
-    "industria y que vende, numero de usuarios y roles, si ya tiene dominio/correo propio, "
+    "industria y que vende, numero de usuarios y roles. En ese mismo punto, pregunta tambien si hay "
+    "alguien mas ademas del dueno a quien deberias poder atender (ej. un gerente de confianza); "
+    "si el dueno nombra a alguien, guardalo con guardar_avance usando el parametro 'autorizado' "
+    "(una llamada por persona) -- si dice que no hay nadie mas, no hace falta guardar nada. "
+    "Tambien pregunta si ya tiene dominio/correo propio, "
     "y LAS DOS PREGUNTAS BISAGRA que definen el camino: (1) si ya tiene Odoo funcionando "
     "[si SI -> camino C: avisa que se hace un checklist de deteccion de lo existente antes de "
     "continuar -- usa la herramienta evaluar_implementacion del tema Norma de implementacion, "
@@ -76,13 +110,17 @@ TOPIC_INSTRUCCIONES = (
     "[si ya opera -> camino B: en Fase 2 le vas a entregar plantillas para migrar productos, "
     "clientes, saldos; si es nuevo -> camino A: no hay nada que migrar, arranca limpio]. "
     "Guarda el camino (A, B o C) con guardar_avance en cuanto lo tengas claro. "
-    "Y por ultimo sus 3 dolores principales del negocio. "
+    "Y por ultimo sus 3 dolores principales del negocio -- en cuanto los tengas, usa el mapa "
+    "dolor-agente que aparece al final de estas instrucciones para mapear cada uno a un codigo "
+    "de agente, y guarda la lista completa con el parametro 'agentes_sugeridos' de guardar_avance. "
     "Guarda el avance con la herramienta de guardar avance despues de CADA respuesta relevante "
     "-- nunca esperes a tener todo para guardar, la conversacion se puede cortar. "
     'Al guardar, siempre pasa fase="descubrimiento". Solo conversas con el dueno o administrador '
-    "designado; si otra persona te escribe, redirigela con amabilidad. Cuando completes las 6 "
-    "preguntas de Fase 1, resume lo recolectado y avisa que la Fase 2 (Propuesta y datos) esta "
-    "en construccion todavia -- no prometas continuar automaticamente."
+    "designado (o con quien el haya autorizado explicitamente, ver arriba); si otra persona no "
+    "autorizada te escribe, redirigela con amabilidad. Cuando completes las preguntas de Fase 1, "
+    "resume lo recolectado -- incluyendo los agentes que le sugieres y por que dolor -- y avisa "
+    "que la Fase 2 (Propuesta y datos) esta en construccion todavia -- no prometas continuar "
+    "automaticamente. " + MAPA_DOLORES_AGENTES
 )
 
 SYSTEM_PROMPT = (
