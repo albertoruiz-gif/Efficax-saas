@@ -83,7 +83,7 @@ complementarlo y adoptarlo como norma: Booster debe poder **seguir un
 procedimiento** de implementación y **evaluar los vacíos** de un Odoo ya
 andando. Quedó así:
 
-- **`NORMA-IMPLEMENTACION.md`** — la norma en 6 fases (Fundaciones →
+- **`fuentes/NORMA-IMPLEMENTACION.md`** — la norma en 6 fases (Fundaciones →
   Datos maestros → Flujos operativos → Verificación → Go-live →
   Post-implementación). Cada ítem marcado `[M]` (del manual) o `[+]`
   (complemento de Efficax), y `✓auto` si la herramienta lo verifica sola.
@@ -133,17 +133,26 @@ Efficax: **Pack 360 y las plantillas RF-10 no existen como archivos** --
 el spec los menciona pero nunca se escribieron. No se inventa su
 contenido (misma convencion del catalogo: no fabricar).
 
-**Primera version honesta, instalada (`instalar_fuentes_booster.py`):**
-solo los DOS documentos reales y ya verificados de este repo, subidos
-como `ai.agent.source` tipo `binary` (con `ir.attachment` real, no texto
-pegado ni URL):
+**`booster/fuentes/` es LA ruta canonica (21-ago-2026, pedido de
+Alberto)** -- donde deben vivir los documentos que Booster consume como
+fuente, movidos ahi desde la raiz de `booster/` con `git mv` (conserva
+historial). `instalar_fuentes_booster.py` escanea esa carpeta con glob
+(`*.md`), no una lista fija en codigo: agregar un documento nuevo (ej.
+cuando lleguen Pack 360 o las plantillas RF-10) es soltar el archivo ahi
+y volver a correr el instalador -- no hace falta tocar codigo.
 
-- `NORMA-IMPLEMENTACION.md`
-- `UX-ONBOARDING.md`
+**Primera version honesta, instalada:** solo los DOS documentos reales y
+ya verificados de este repo, subidos como `ai.agent.source` tipo
+`binary` (con `ir.attachment` real, no texto pegado ni URL):
+
+- `fuentes/NORMA-IMPLEMENTACION.md`
+- `fuentes/UX-ONBOARDING.md`
 
 Ambos quedaron `status='indexed'` y `sources_fully_processed=True` en el
 agente. Instalador idempotente por archivo: si la fuente ya existe para
-ese nombre, reemplaza el adjunto en vez de duplicar.
+ese nombre, reemplaza el adjunto en vez de duplicar. Reinstalado desde
+la ruta nueva y reverificado en vivo (21-ago-2026): mismos `source_id`
+(5, 6), sigue `indexed`.
 
 **Pendiente:** Pack 360 y plantillas RF-10 -- requieren que Alberto los
 provea o confirme que se redacten desde cero.
@@ -152,7 +161,7 @@ provea o confirme que se redacten desde cero.
 podia responder si de verdad leyo los documentos (no algo ya cubierto
 por su `system_prompt`): en que fase se instala `x_booster_licencia` y
 que verifica el smoke test. Respondio citando la fuente (`[1]`) con el
-contenido EXACTO de `UX-ONBOARDING.md` -- Fase 3 (Provisioning), los 4
+contenido EXACTO de `fuentes/UX-ONBOARDING.md` -- Fase 3 (Provisioning), los 4
 checks del smoke test (Live Chat responde, correo transaccional sale,
 metodo de pago carga, llave renovada hoy) y el reporte verde/rojo al
 Supervisor. Confirmado texto por texto via RPC, no solo por pantalla.
@@ -285,7 +294,7 @@ existe ningún tenant de cliente real todavía); queda para cuando se diseñe
 el mecanismo de provisioning de Fase 3.
 
 **Cómo llega el cliente hasta ahí — diseño propuesto (17-ago-2026):**
-ver `booster/UX-ONBOARDING.md`. Detectado como vacío real (Alberto vio la
+ver `booster/fuentes/UX-ONBOARDING.md`. Detectado como vacío real (Alberto vio la
 lista técnica de `x_booster_implementacion` en el backend de Odoo y
 preguntó cómo interactúa un cliente de verdad) — la interfaz real nunca
 es esa vista de Odoo, es 100% el chat de Booster. Propuesta: reusar el

@@ -1,7 +1,7 @@
 """Instala en el tenant la herramienta `evaluar_implementacion` de Booster
 y el topic "Booster — Norma de implementación", que adopta como norma el
 manual de implementación de Odoo (Perú) aportado por Alberto el
-19-ago-2026, complementado en `booster/NORMA-IMPLEMENTACION.md`.
+19-ago-2026, complementado en `booster/fuentes/NORMA-IMPLEMENTACION.md`.
 
 Mismo patrón que `instalar_booster_fase1.py` (ir.actions.server con
 `use_in_ai` + ai.topic + enlace al agente Booster), con UNA diferencia

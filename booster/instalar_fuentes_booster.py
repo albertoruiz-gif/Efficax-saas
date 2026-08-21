@@ -9,16 +9,25 @@ el repo cross-repo de Efficax y **Pack 360 y las plantillas RF-10 no
 existen como archivos** -- el spec los menciona pero nunca se escribieron.
 No se inventa su contenido (misma convencion que el resto del catalogo).
 
-Primera version honesta: solo se cargan los DOS documentos reales y
-verificados que ya existen en este repo y son relevantes para lo que
-Booster conversa hoy (Fase 1 + Fase 1-bis):
+**Ruta canonica (21-ago-2026, pedido de Alberto):** `booster/fuentes/` es
+LA carpeta donde deben vivir los documentos que Booster consume como
+fuente -- no sueltos en la raiz de `booster/` mezclados con scripts y
+README. Este instalador escanea esa carpeta con glob (`*.md`), no una
+lista fija en codigo: para agregar una fuente nueva (ej. cuando lleguen
+Pack 360 o las plantillas RF-10), basta con soltar el archivo ahi y
+volver a correr `python instalar_fuentes_booster.py` -- no hace falta
+tocar este script.
 
-1. `booster/NORMA-IMPLEMENTACION.md` -- la norma de 6 fases que
+Primera version honesta, con los DOS documentos reales y verificados que
+ya existian en este repo y son relevantes para lo que Booster conversa
+hoy (Fase 1 + Fase 1-bis), movidos a `booster/fuentes/`:
+
+1. `NORMA-IMPLEMENTACION.md` -- la norma de 6 fases que
    `evaluar_implementacion` usa; Booster necesita conocerla para explicar
    sus hallazgos con criterio, no solo repetir el JSON de la herramienta.
-2. `booster/UX-ONBOARDING.md` -- el detalle de los 3 caminos A/B/C, el
-   porque el checkout va antes de tocar nada tecnico, y el Protocolo
-   Produccion (RF-20) para clientes que ya operan.
+2. `UX-ONBOARDING.md` -- el detalle de los 3 caminos A/B/C, el porque el
+   checkout va antes de tocar nada tecnico, y el Protocolo Produccion
+   (RF-20) para clientes que ya operan.
 
 Pendiente (no instalado aca, requiere que Alberto los provea o confirme):
 Pack 360 y plantillas RF-10 -- ver README.md, seccion "Fuentes del
@@ -42,10 +51,16 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "scripts"))
 from booster_rpc import Odoo  # noqa: E402
 
-DOCUMENTOS = [
-    RAIZ / "booster" / "NORMA-IMPLEMENTACION.md",
-    RAIZ / "booster" / "UX-ONBOARDING.md",
-]
+FUENTES_DIR = RAIZ / "booster" / "fuentes"
+
+
+def documentos() -> list[pathlib.Path]:
+    """Cualquier .md dentro de booster/fuentes/ es una fuente a instalar --
+    sin lista fija, para que agregar un documento nuevo no requiera tocar
+    codigo (ver docstring del modulo)."""
+    if not FUENTES_DIR.is_dir():
+        raise RuntimeError(f"No existe {FUENTES_DIR} -- crear la carpeta y poner ahi los documentos fuente.")
+    return sorted(FUENTES_DIR.glob("*.md"))
 
 
 def instalar_fuente(o: Odoo, agente_id: int, ruta: pathlib.Path) -> dict:
@@ -98,11 +113,13 @@ def instalar(o: Odoo) -> list[dict]:
         raise RuntimeError("El agente Booster no existe -- correr antes instalar_booster_fase1.py")
     agente_id = agente[0]
 
+    docs = documentos()
+    if not docs:
+        print(f"AVISO: {FUENTES_DIR} esta vacia -- nada que instalar.")
+        return []
+
     resultados = []
-    for ruta in DOCUMENTOS:
-        if not ruta.exists():
-            print(f"AVISO: {ruta} no existe, se omite.")
-            continue
+    for ruta in docs:
         r = instalar_fuente(o, agente_id, ruta)
         resultados.append(r)
         print(f"Fuente instalada: {r['archivo']} (source_id {r['source_id']}) -- esperando indexado...")

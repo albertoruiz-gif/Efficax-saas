@@ -88,7 +88,7 @@ de Booster.
 1. **Smoke test de punta a punta con datos de prueba**: una venta completa
    (cotización→SUNAT→NC de reversa), una compra desde XML, una
    conciliación. Igual al smoke test ya definido para el cierre de la
-   Fase 3 de Booster en `UX-ONBOARDING.md`.
+   Fase 3 de Booster en `fuentes/UX-ONBOARDING.md`.
 2. **Doble prueba de toda automatización instalada** (recordatorios,
    reabastecimiento, agentes): caso feliz + caso de falla — misma
    convención que las 58 herramientas del catálogo.

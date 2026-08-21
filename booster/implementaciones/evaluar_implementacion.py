@@ -1,7 +1,7 @@
 """Server Action: booster / evaluar_implementacion
 
 Evalúa los vacíos de una implementación Odoo contra la Norma de
-Implementación de Booster (`booster/NORMA-IMPLEMENTACION.md`) -- la
+Implementación de Booster (`booster/fuentes/NORMA-IMPLEMENTACION.md`) -- la
 operacionalización del manual "Implementación del Sistema Odoo --
 Localización Perú" que Alberto aportó el 19-ago-2026 con la instrucción
 de complementarlo y adoptarlo como norma.
